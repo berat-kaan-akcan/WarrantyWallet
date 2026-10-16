@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // Sentinel errors shared by stores and services.
@@ -77,37 +78,61 @@ func (p *Product) Normalize() {
 	p.WarrantyEnd = WarrantyEnd(p.PurchaseDate, p.WarrantyMonths)
 }
 
-// Validate returns field errors (empty map = valid).
+// MaxPrice keeps prices inside numeric(12,2) with a wide safety margin.
+const MaxPrice = 1_000_000_000
+
+// MinPurchaseDate rejects obviously wrong years (e.g. OCR reading "0026").
+var MinPurchaseDate = NewDate(1990, 1, 1)
+
+// Validate returns field errors (empty map = valid). Lengths count characters, not bytes,
+// so Turkish letters are not penalised.
 func (p *Product) Validate(today Date) map[string]string {
 	errs := map[string]string{}
 	if p.Name == "" {
 		errs["name"] = "required"
-	} else if len(p.Name) > 200 {
+	} else if utf8.RuneCountInString(p.Name) > 200 {
 		errs["name"] = "max 200 characters"
 	}
-	if p.PurchaseDate.IsZero() {
+	switch {
+	case p.PurchaseDate.IsZero():
 		errs["purchase_date"] = "required"
-	} else if p.PurchaseDate.After(today.AddDays(1)) {
+	case p.PurchaseDate.After(today.AddDays(1)):
 		errs["purchase_date"] = "cannot be in the future"
+	case p.PurchaseDate.Before(MinPurchaseDate):
+		errs["purchase_date"] = "must be 1990-01-01 or later"
 	}
 	if p.WarrantyMonths < 0 || p.WarrantyMonths > 240 {
 		errs["warranty_months"] = "must be between 0 and 240"
 	}
 	if p.Price < 0 {
 		errs["price"] = "cannot be negative"
+	} else if p.Price > MaxPrice {
+		errs["price"] = "too large"
 	}
-	if len(p.Currency) != 3 {
+	if !isCurrencyCode(p.Currency) {
 		errs["currency"] = "must be a 3-letter ISO code"
 	}
 	for k, v := range map[string]string{"brand": p.Brand, "model": p.Model, "seller": p.Seller, "serial_number": p.SerialNumber, "category": p.Category} {
-		if len(v) > 120 {
+		if utf8.RuneCountInString(v) > 120 {
 			errs[k] = "max 120 characters"
 		}
 	}
-	if len(p.Notes) > 2000 {
+	if utf8.RuneCountInString(p.Notes) > 2000 {
 		errs["notes"] = "max 2000 characters"
 	}
 	return errs
+}
+
+func isCurrencyCode(c string) bool {
+	if len(c) != 3 {
+		return false
+	}
+	for _, r := range c {
+		if r < 'A' || r > 'Z' {
+			return false
+		}
+	}
+	return true
 }
 
 // DocumentType classifies stored files.

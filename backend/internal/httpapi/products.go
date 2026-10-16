@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/domain"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/notify"
@@ -106,13 +108,23 @@ func (s *Server) syncReminders(ctx context.Context, p domain.Product) {
 func (s *Server) handleListProducts(w http.ResponseWriter, r *http.Request) {
 	u := userFrom(r.Context())
 	q := r.URL.Query()
-	f := store.ProductFilter{Category: q.Get("category"), Query: q.Get("q")}
+	f := store.ProductFilter{Category: q.Get("category"), Query: strings.TrimSpace(q.Get("q"))}
+	status := domain.WarrantyStatus(q.Get("status"))
+	switch status {
+	case "", domain.StatusActive, domain.StatusExpiringSoon, domain.StatusExpired, domain.StatusUnknown:
+	default:
+		writeError(w, http.StatusUnprocessableEntity, "validation_failed", "invalid filter", map[string]string{"status": "active|expiring_soon|expired|unknown"})
+		return
+	}
+	if utf8.RuneCountInString(f.Query) > 100 {
+		writeError(w, http.StatusUnprocessableEntity, "validation_failed", "invalid filter", map[string]string{"q": "max 100 characters"})
+		return
+	}
 	products, err := s.Store.ListProducts(r.Context(), u.ID, f)
 	if err != nil {
 		s.storeError(w, err)
 		return
 	}
-	status := domain.WarrantyStatus(q.Get("status"))
 	out := make([]ProductView, 0, len(products))
 	for _, p := range products {
 		v := s.view(p)

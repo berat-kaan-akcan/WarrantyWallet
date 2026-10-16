@@ -2,6 +2,7 @@ package domain
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 )
@@ -139,5 +140,38 @@ func TestNewID(t *testing.T) {
 	a, b := NewID(), NewID()
 	if a == b || len(a) != 36 || a[14] != '4' {
 		t.Fatalf("bad ids %s %s", a, b)
+	}
+}
+
+func TestProductValidateBounds(t *testing.T) {
+	today := NewDate(2026, 10, 16)
+	base := func() Product {
+		p := Product{Name: "Çamaşır Makinesi", PurchaseDate: NewDate(2026, 1, 2), Price: 100, Currency: "TRY", WarrantyMonths: 24}
+		p.Normalize()
+		return p
+	}
+	if p := base(); len(p.Validate(today)) != 0 {
+		errs := p.Validate(today)
+		t.Fatalf("valid product rejected: %v", errs)
+	}
+	cases := map[string]func(p *Product){
+		"price":         func(p *Product) { p.Price = MaxPrice + 1 },
+		"currency":      func(p *Product) { p.Currency = "T1Y" },
+		"purchase_date": func(p *Product) { p.PurchaseDate = NewDate(1989, 12, 31) },
+		"name":          func(p *Product) { p.Name = strings.Repeat("ş", 201) },
+		"brand":         func(p *Product) { p.Brand = strings.Repeat("x", 121) },
+	}
+	for field, mutate := range cases {
+		p := base()
+		mutate(&p)
+		if errs := p.Validate(today); errs[field] == "" {
+			t.Errorf("%s: expected error, got %v", field, errs)
+		}
+	}
+	// 200 Turkish characters are 400 bytes but still valid.
+	p := base()
+	p.Name = strings.Repeat("ğ", 200)
+	if errs := p.Validate(today); errs["name"] != "" {
+		t.Fatalf("rune count not used: %v", errs)
 	}
 }

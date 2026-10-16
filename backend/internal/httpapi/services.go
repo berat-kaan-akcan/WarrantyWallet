@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/domain"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/pdf"
@@ -21,7 +22,7 @@ type serviceInput struct {
 	Notes       *string               `json:"notes"`
 }
 
-func (in serviceInput) apply(r *domain.ServiceRecord) map[string]string {
+func (in serviceInput) apply(r *domain.ServiceRecord, today domain.Date) map[string]string {
 	errs := map[string]string{}
 	if in.Problem != nil {
 		r.Problem = *in.Problem
@@ -47,14 +48,17 @@ func (in serviceInput) apply(r *domain.ServiceRecord) map[string]string {
 	if !domain.ValidServiceStatus(r.Status) {
 		errs["status"] = "open|in_service|resolved|cancelled"
 	}
-	if len(r.Description) > 2000 {
+	if utf8.RuneCountInString(r.Description) > 2000 {
 		errs["description"] = "max 2000 characters"
 	}
-	if len(r.Notes) > 2000 {
+	if utf8.RuneCountInString(r.Notes) > 2000 {
 		errs["notes"] = "max 2000 characters"
 	}
-	if len(r.ServiceName) > 200 {
+	if utf8.RuneCountInString(r.ServiceName) > 200 {
 		errs["service_name"] = "max 200 characters"
+	}
+	if !r.ServiceDate.IsZero() && (r.ServiceDate.Before(domain.MinPurchaseDate) || r.ServiceDate.After(today.AddDays(366))) {
+		errs["service_date"] = "must be between 1990-01-01 and one year from today"
 	}
 	return errs
 }
@@ -78,7 +82,7 @@ func (s *Server) handleCreateServiceRecord(w http.ResponseWriter, r *http.Reques
 	}
 	rec := domain.ServiceRecord{UserID: u.ID, ProductID: p.ID, Status: domain.ServiceOpen,
 		UnderWarranty: domain.IsCovered(p.WarrantyEnd, s.today())}
-	if errs := in.apply(&rec); len(errs) > 0 {
+	if errs := in.apply(&rec, s.today()); len(errs) > 0 {
 		writeError(w, http.StatusUnprocessableEntity, "validation_failed", "invalid service record", errs)
 		return
 	}
@@ -160,7 +164,7 @@ func (s *Server) handleUpdateServiceRecord(w http.ResponseWriter, r *http.Reques
 	if !decodeJSON(w, r, &in) {
 		return
 	}
-	if errs := in.apply(&rec); len(errs) > 0 {
+	if errs := in.apply(&rec, s.today()); len(errs) > 0 {
 		writeError(w, http.StatusUnprocessableEntity, "validation_failed", "invalid service record", errs)
 		return
 	}
