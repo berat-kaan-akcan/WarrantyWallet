@@ -147,6 +147,45 @@ func (g *GeminiExtractor) Extract(ctx context.Context, in Input) (Result, error)
 		return Result{}, err
 	}
 
+	raw, model, err := g.generate(ctx, body)
+	if err != nil {
+		return Result{}, err
+	}
+	f, err := parseGeminiJSON(raw)
+	if err != nil {
+		return Result{}, err
+	}
+	f, missing := Clean(f)
+	return Result{Fields: f, Provider: "gemini", Model: model, RawText: strings.TrimSpace(in.Text), Missing: missing}, nil
+}
+
+// GenerateJSON sends a text-only prompt with a response schema (structured output) and returns
+// the raw JSON text and the model that answered. It shares retries and the model fallback
+// chain with receipt extraction, so other features (e.g. the fault assistant) can reuse it.
+func (g *GeminiExtractor) GenerateJSON(ctx context.Context, prompt string, schema map[string]any) (string, string, error) {
+	if strings.TrimSpace(g.APIKey) == "" {
+		return "", "", ErrNotConfigured
+	}
+	body, err := json.Marshal(map[string]any{
+		"contents": []any{map[string]any{"role": "user", "parts": []gemPart{{Text: prompt}}}},
+		"generationConfig": map[string]any{
+			"temperature":      0.2,
+			"responseMimeType": "application/json",
+			"responseSchema":   schema,
+		},
+	})
+	if err != nil {
+		return "", "", err
+	}
+	raw, model, err := g.generate(ctx, body)
+	if err != nil {
+		return "", "", err
+	}
+	return stripFences(raw), model, nil
+}
+
+// generate tries the main model, then the fallbacks.
+func (g *GeminiExtractor) generate(ctx context.Context, body []byte) (string, string, error) {
 	models := append([]string{g.Model}, g.Fallbacks...)
 	var lastErr error
 	for _, model := range models {
@@ -165,19 +204,14 @@ func (g *GeminiExtractor) Extract(ctx context.Context, in Input) (Result, error)
 				lastErr = fmt.Errorf("%s: %w", model, err)
 				continue
 			}
-			return Result{}, err
+			return "", "", err
 		}
-		f, err := parseGeminiJSON(raw)
-		if err != nil {
-			return Result{}, err
-		}
-		f, missing := Clean(f)
-		return Result{Fields: f, Provider: "gemini", Model: model, RawText: strings.TrimSpace(in.Text), Missing: missing}, nil
+		return raw, model, nil
 	}
 	if lastErr == nil {
 		lastErr = ErrNotConfigured
 	}
-	return Result{}, lastErr
+	return "", "", lastErr
 }
 
 var errModelNotFound = fmt.Errorf("model not found")
@@ -273,13 +307,17 @@ func (g *GeminiExtractor) call(ctx context.Context, model string, body []byte) (
 	return sb.String(), false, nil
 }
 
-func parseGeminiJSON(raw string) (Fields, error) {
+func stripFences(raw string) string {
 	raw = strings.TrimSpace(raw)
 	raw = strings.TrimPrefix(raw, "```json")
 	raw = strings.TrimPrefix(raw, "```")
 	raw = strings.TrimSuffix(raw, "```")
+	return strings.TrimSpace(raw)
+}
+
+func parseGeminiJSON(raw string) (Fields, error) {
 	var gf gemFields
-	if err := json.Unmarshal([]byte(strings.TrimSpace(raw)), &gf); err != nil {
+	if err := json.Unmarshal([]byte(stripFences(raw)), &gf); err != nil {
 		return Fields{}, fmt.Errorf("%w: %v", ErrBadResponse, err)
 	}
 	s := func(p *string) string {

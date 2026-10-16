@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/assist"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/auth"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/config"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/extract"
@@ -86,8 +87,13 @@ func run(logger *slog.Logger) error {
 		logger.Info("gemini extraction enabled", "model", cfg.GeminiModel, "fallbacks", cfg.GeminiFallbacks)
 	}
 
+	var assistant assist.Assistant
+	if cfg.GeminiAPIKey != "" {
+		assistant.Gemini = gem
+	}
+
 	srv := &httpapi.Server{
-		Store: st, Files: files, Extractor: extractor,
+		Store: st, Files: files, Extractor: extractor, Assistant: assistant,
 		Tokens:      auth.Tokens{Secret: []byte(cfg.JWTSecret), TTL: cfg.TokenTTL},
 		RefreshTTL:  cfg.RefreshTTL,
 		Mailer:      mail.LogSender{Logger: logger},

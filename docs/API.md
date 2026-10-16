@@ -17,7 +17,7 @@ H="Authorization: Bearer $TOKEN"
 | Bilinmeyen alan | JSON gövdesinde tanımsız alan → `400 bad_request` (istemci yazım hatalarını yakalamak için). |
 | Sahiplik | Başka kullanıcının kaynağı her zaman `404 not_found` döner (varlığı sızdırılmaz). |
 | Tarih | `YYYY-MM-DD` (gün bazında, Türkiye saati). Zaman damgaları RFC 3339 UTC. |
-| Hız sınırı | `/auth/*`: IP başına dakikada 10, `/extract`: dakikada 20 → `429 rate_limited` + `Retry-After`. `X-Forwarded-For` yalnızca `TRUST_PROXY=true` ise dikkate alınır. |
+| Hız sınırı | `/auth/*`: IP başına dakikada 10, `/extract` ve `/products/{id}/diagnose`: dakikada 20 → `429 rate_limited` + `Retry-After`. `X-Forwarded-For` yalnızca `TRUST_PROXY=true` ise dikkate alınır. |
 | Yükleme | En fazla 10 MB; JPEG, PNG, WEBP, HEIC, PDF (içerik koklanır, uzantıya güvenilmez). |
 
 ### Hata kodları
@@ -236,6 +236,28 @@ curl -X POST $B/extract -H "$H" -F "image=@fis.jpg;type=image/jpeg"
   tabanlıya düşülür ve `warnings` nedenini söyler, örn. `"gemini unavailable: ... HTTP 503 UNAVAILABLE ..."`.
 - `missing`: kullanıcının doldurması gereken alanlar. `suggested_warranty_months` çıkarılamadıysa 24 (TR asgari süresi).
 - Hatalar: görsel/metin yok → `422`; hiçbir yöntem okuyamadı → `502 extraction_failed`.
+
+---
+
+## AI arıza asistanı
+
+### `POST /products/{id}/diagnose` (auth, fiş okuma ile aynı hız sınırı: 20/dk)
+İstek: `{"problem":"wont_turn_on|screen_lines|physical_damage|other","description":"..."}`. `problem` boşsa `other` sayılır; `other` için açıklama en az 5 karakter olmalı. Açıklama en fazla 2000 karakter.
+Gemini yapılandırılmışsa modelden yapılandırılmış JSON istenir; hata/kota/geçersiz yanıtta Türkçe kural tabanı yanıt verir (`provider: "rules"`, `warnings: ["ai_unavailable"]`). Garanti tavsiyesi ve uyarı metni her zaman sunucudaki verilerden üretilir, modelden alınmaz. Açıklamada duman, yanık kokusu, şişmiş pil, sıvı teması gibi ifadeler varsa `safety_warning` her durumda doldurulur.
+```json
+{
+  "summary": "Telefonunuzun şarjdayken kapanması ... pil, şarj aksesuarları veya yazılımsal bir soruna işaret edebilir.",
+  "likely_causes": [{"cause": "Pil tamamen boşalmış veya şarj sorunu", "likelihood": "high", "explanation": "..."}],
+  "steps": [{"title": "Farklı bir şarj cihazı ve kablo deneyin", "detail": "..."}],
+  "safety_warning": "",
+  "recommend_service": true,
+  "warranty_advice": "Ürününüz garanti kapsamında (bitişe 502 gün var). Cihazı açmayın ...",
+  "provider": "gemini",
+  "model": "gemini-2.5-flash",
+  "disclaimer": "Bu öneriler genel bilgilendirme amaçlıdır; ..."
+}
+```
+En fazla 5 neden ve 6 adım döner. Hatalar: `422 validation_failed` (`problem`, `description`), `404 not_found` (başka kullanıcının ürünü), `429 rate_limited`.
 
 ---
 

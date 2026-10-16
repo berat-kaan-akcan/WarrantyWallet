@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/assist"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/auth"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/domain"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/extract"
@@ -22,6 +23,7 @@ type Server struct {
 	Store       store.Store
 	Files       storage.Storage
 	Extractor   extract.ReceiptExtractor
+	Assistant   assist.Assistant // AI fault assistant; zero value = rules only
 	Tokens      auth.Tokens
 	RefreshTTL  time.Duration // refresh token lifetime (default 30 days)
 	Mailer      mail.Sender
@@ -94,6 +96,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("DELETE /api/v1/products/{id}", a(http.HandlerFunc(s.handleDeleteProduct)))
 	mux.Handle("GET /api/v1/products/{id}/checklist", a(http.HandlerFunc(s.handleChecklist)))
 	mux.Handle("GET /api/v1/products/{id}/service-pack.pdf", a(http.HandlerFunc(s.handleServicePack)))
+
+	mux.Handle("POST /api/v1/products/{id}/diagnose", a(s.extractLimiter.wrap(http.HandlerFunc(s.handleDiagnose))))
 
 	mux.Handle("POST /api/v1/products/{id}/documents", a(http.HandlerFunc(s.handleUploadDocument)))
 	mux.Handle("GET /api/v1/products/{id}/documents", a(http.HandlerFunc(s.handleListDocuments)))
