@@ -279,13 +279,29 @@ En fazla 5 neden ve 6 adım döner. Hatalar: `422 validation_failed` (`problem`,
 ```
 `problem`: `wont_turn_on|screen_lines|physical_damage|other`. `service_date` 1990-01-01 ile bugünden 1 yıl sonrası arası.
 
+Kayıt alanları ayrıca `cost` (kullanıcının ödediği onarım ücreti, 0–1 milyar) ve `resolved_at` (durum `resolved` veya `cancelled` olunca sunucu doldurur) içerir. İsteğe bağlı `event_note` (≤500) zaman çizelgesindeki ilk kaydın notu olur.
+
 ### `PATCH /service-records/{id}` (auth)
 ```json
-{"status":"in_service","notes":"Servise teslim edildi"}
+{"status":"in_service","service_name":"Yetkili Servis","event_note":"Servise teslim edildi","cost":0}
 ```
-`status`: `open|in_service|resolved|cancelled`. Gönderilmeyen alanlar değişmez.
+`status`: `open|in_service|resolved|cancelled`. Gönderilmeyen alanlar değişmez. Durum değişirse zaman çizelgesine bir olay eklenir (`event_note` onun notudur); kapanınca `resolved_at` dolar, yeniden açılınca silinir.
 
-### `GET /service-records` · `GET /products/{id}/service-records` · `GET /service-records/{id}` (auth)
+### `GET /service-records/{id}` (auth)
+Kayıt + `product_name` + zaman çizelgesi (eskiden yeniye):
+```json
+{"id":"...","status":"resolved","cost":450.75,"resolved_at":"2026-10-16T09:00:00Z","product_name":"Arçelik Buzdolabı",
+ "events":[{"id":"...","service_record_id":"...","status":"open","note":"Kayıt açıldı","created_at":"..."},
+           {"id":"...","service_record_id":"...","status":"in_service","note":"Servise teslim edildi","created_at":"..."}]}
+```
+
+### `GET /service-records?status=` (auth)
+`{"items":[... product_name ile ...],"summary":{"total":2,"active":1,"by_status":{"open":1,"resolved":1},"total_cost":450.75,"avg_resolution_days":3}}`. `summary` filtreden bağımsız tüm kayıtları kapsar; `avg_resolution_days` çözülmüş kayıt yoksa `null`. Geçersiz `status` → `422`.
+
+### `GET /products/{id}/service-records` (auth) → `{"items":[...]}`
+
+### `DELETE /service-records/{id}` (auth) → `204`
+Zaman çizelgesi de silinir; kayda bağlı fotoğraflar ürünün belgeleri olarak kalır.
 
 ### `GET /products/{id}/checklist` (auth)
 ```json

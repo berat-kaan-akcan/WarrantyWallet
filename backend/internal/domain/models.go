@@ -226,8 +226,22 @@ type ServiceRecord struct {
 	Status        ServiceStatus `json:"status"`
 	Notes         string        `json:"notes"`
 	UnderWarranty bool          `json:"under_warranty"`
+	Cost          float64       `json:"cost"`                  // repair cost paid by the user (0 = free / unknown)
+	ResolvedAt    *time.Time    `json:"resolved_at,omitempty"` // set when resolved or cancelled
 	CreatedAt     time.Time     `json:"created_at"`
 	UpdatedAt     time.Time     `json:"updated_at"`
+}
+
+// Closed reports whether the case is finished (resolved or cancelled).
+func (s ServiceStatus) Closed() bool { return s == ServiceResolved || s == ServiceCancelled }
+
+// ServiceEvent is one entry in a service record's status timeline.
+type ServiceEvent struct {
+	ID              string        `json:"id"`
+	ServiceRecordID string        `json:"service_record_id"`
+	Status          ServiceStatus `json:"status"`
+	Note            string        `json:"note"`
+	CreatedAt       time.Time     `json:"created_at"`
 }
 
 // NotificationType identifies a reminder.

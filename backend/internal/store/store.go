@@ -53,6 +53,9 @@ type Store interface {
 	GetServiceRecord(ctx context.Context, userID, id string) (domain.ServiceRecord, error)
 	ListServiceRecords(ctx context.Context, userID, productID string) ([]domain.ServiceRecord, error) // productID "" = all
 	UpdateServiceRecord(ctx context.Context, r *domain.ServiceRecord) error
+	DeleteServiceRecord(ctx context.Context, userID, id string) error // documents keep existing, unlinked
+	AddServiceEvent(ctx context.Context, userID string, e *domain.ServiceEvent) error
+	ListServiceEvents(ctx context.Context, userID, recordID string) ([]domain.ServiceEvent, error) // oldest first
 
 	ReplaceNotifications(ctx context.Context, userID, productID string, ns []domain.Notification) error
 	ListNotifications(ctx context.Context, userID string) ([]domain.Notification, error)

@@ -109,6 +109,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/v1/service-records", a(http.HandlerFunc(s.handleListServiceRecords)))
 	mux.Handle("GET /api/v1/service-records/{id}", a(http.HandlerFunc(s.handleGetServiceRecord)))
 	mux.Handle("PATCH /api/v1/service-records/{id}", a(http.HandlerFunc(s.handleUpdateServiceRecord)))
+	mux.Handle("DELETE /api/v1/service-records/{id}", a(http.HandlerFunc(s.handleDeleteServiceRecord)))
 
 	mux.Handle("POST /api/v1/extract", a(s.extractLimiter.wrap(http.HandlerFunc(s.handleExtract))))
 	mux.Handle("GET /api/v1/dashboard", a(http.HandlerFunc(s.handleDashboard)))

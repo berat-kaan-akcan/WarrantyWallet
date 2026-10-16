@@ -20,6 +20,8 @@ type serviceInput struct {
 	ServiceDate *domain.Date          `json:"service_date"`
 	Status      *domain.ServiceStatus `json:"status"`
 	Notes       *string               `json:"notes"`
+	Cost        *float64              `json:"cost"`
+	EventNote   string                `json:"event_note"` // optional note for the timeline entry of a status change
 }
 
 func (in serviceInput) apply(r *domain.ServiceRecord, today domain.Date) map[string]string {
@@ -42,6 +44,9 @@ func (in serviceInput) apply(r *domain.ServiceRecord, today domain.Date) map[str
 	if in.Notes != nil {
 		r.Notes = strings.TrimSpace(*in.Notes)
 	}
+	if in.Cost != nil {
+		r.Cost = *in.Cost
+	}
 	if !domain.ValidProblem(r.Problem) {
 		errs["problem"] = "wont_turn_on|screen_lines|physical_damage|other"
 	}
@@ -56,6 +61,12 @@ func (in serviceInput) apply(r *domain.ServiceRecord, today domain.Date) map[str
 	}
 	if utf8.RuneCountInString(r.ServiceName) > 200 {
 		errs["service_name"] = "max 200 characters"
+	}
+	if r.Cost < 0 || r.Cost > domain.MaxPrice {
+		errs["cost"] = "must be between 0 and 1000000000"
+	}
+	if utf8.RuneCountInString(in.EventNote) > 500 {
+		errs["event_note"] = "max 500 characters"
 	}
 	if !r.ServiceDate.IsZero() && (r.ServiceDate.Before(domain.MinPurchaseDate) || r.ServiceDate.After(today.AddDays(366))) {
 		errs["service_date"] = "must be between 1990-01-01 and one year from today"
@@ -86,10 +97,12 @@ func (s *Server) handleCreateServiceRecord(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusUnprocessableEntity, "validation_failed", "invalid service record", errs)
 		return
 	}
+	s.markResolution(&rec)
 	if err := s.Store.CreateServiceRecord(r.Context(), &rec); err != nil {
 		s.storeError(w, err)
 		return
 	}
+	s.addEvent(r.Context(), u.ID, rec, in.EventNote)
 	resp := serviceResponse{ServiceRecord: rec}
 	if rec.UnderWarranty {
 		docs, _ := s.Store.ListDocuments(r.Context(), u.ID, p.ID)
@@ -112,6 +125,15 @@ func (s *Server) handleListProductServiceRecords(w http.ResponseWriter, r *http.
 	writeJSON(w, http.StatusOK, map[string]any{"items": recs})
 }
 
+// serviceSummary aggregates all of the user's records (ignores the status filter).
+type serviceSummary struct {
+	Total             int                          `json:"total"`
+	Active            int                          `json:"active"` // open + in_service
+	ByStatus          map[domain.ServiceStatus]int `json:"by_status"`
+	TotalCost         float64                      `json:"total_cost"`
+	AvgResolutionDays *float64                     `json:"avg_resolution_days"`
+}
+
 // serviceHistoryItem enriches records with product name for the history list.
 type serviceHistoryItem struct {
 	domain.ServiceRecord
@@ -125,11 +147,27 @@ func (s *Server) handleListServiceRecords(w http.ResponseWriter, r *http.Request
 		s.storeError(w, err)
 		return
 	}
-	status := r.URL.Query().Get("status")
+	status := domain.ServiceStatus(r.URL.Query().Get("status"))
+	if status != "" && !domain.ValidServiceStatus(status) {
+		writeError(w, http.StatusUnprocessableEntity, "validation_failed", "invalid filter", map[string]string{"status": "open|in_service|resolved|cancelled"})
+		return
+	}
 	names := map[string]string{}
 	out := make([]serviceHistoryItem, 0, len(recs))
+	sum := serviceSummary{ByStatus: map[domain.ServiceStatus]int{}}
+	var resolvedDays, resolvedN int
 	for _, rec := range recs {
-		if status != "" && string(rec.Status) != status {
+		sum.Total++
+		sum.ByStatus[rec.Status]++
+		sum.TotalCost += rec.Cost
+		if !rec.Status.Closed() {
+			sum.Active++
+		}
+		if rec.Status == domain.ServiceResolved && rec.ResolvedAt != nil {
+			resolvedDays += int(rec.ResolvedAt.Sub(rec.CreatedAt).Hours() / 24)
+			resolvedN++
+		}
+		if status != "" && rec.Status != status {
 			continue
 		}
 		name, ok := names[rec.ProductID]
@@ -141,16 +179,34 @@ func (s *Server) handleListServiceRecords(w http.ResponseWriter, r *http.Request
 		}
 		out = append(out, serviceHistoryItem{ServiceRecord: rec, ProductName: name})
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"items": out})
+	if resolvedN > 0 {
+		avg := float64(resolvedDays) / float64(resolvedN)
+		sum.AvgResolutionDays = &avg
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": out, "summary": sum})
 }
 
 func (s *Server) handleGetServiceRecord(w http.ResponseWriter, r *http.Request) {
-	rec, err := s.Store.GetServiceRecord(r.Context(), userFrom(r.Context()).ID, r.PathValue("id"))
+	u := userFrom(r.Context())
+	rec, err := s.Store.GetServiceRecord(r.Context(), u.ID, r.PathValue("id"))
 	if err != nil {
 		s.storeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, rec)
+	events, err := s.Store.ListServiceEvents(r.Context(), u.ID, rec.ID)
+	if err != nil {
+		s.storeError(w, err)
+		return
+	}
+	out := struct {
+		domain.ServiceRecord
+		ProductName string                `json:"product_name"`
+		Events      []domain.ServiceEvent `json:"events"`
+	}{ServiceRecord: rec, Events: events}
+	if p, err := s.Store.GetProduct(r.Context(), u.ID, rec.ProductID); err == nil {
+		out.ProductName = p.Name
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (s *Server) handleUpdateServiceRecord(w http.ResponseWriter, r *http.Request) {
@@ -164,15 +220,49 @@ func (s *Server) handleUpdateServiceRecord(w http.ResponseWriter, r *http.Reques
 	if !decodeJSON(w, r, &in) {
 		return
 	}
+	prev := rec.Status
 	if errs := in.apply(&rec, s.today()); len(errs) > 0 {
 		writeError(w, http.StatusUnprocessableEntity, "validation_failed", "invalid service record", errs)
 		return
+	}
+	changed := rec.Status != prev
+	if changed {
+		s.markResolution(&rec)
 	}
 	if err := s.Store.UpdateServiceRecord(r.Context(), &rec); err != nil {
 		s.storeError(w, err)
 		return
 	}
+	if changed {
+		s.addEvent(r.Context(), u.ID, rec, in.EventNote)
+	}
 	writeJSON(w, http.StatusOK, rec)
+}
+
+// markResolution keeps resolved_at in step with the status.
+func (s *Server) markResolution(rec *domain.ServiceRecord) {
+	if rec.Status.Closed() {
+		now := s.now().UTC()
+		rec.ResolvedAt = &now
+	} else {
+		rec.ResolvedAt = nil
+	}
+}
+
+// addEvent records a status change on the timeline; failures are logged, not fatal.
+func (s *Server) addEvent(ctx context.Context, userID string, rec domain.ServiceRecord, note string) {
+	e := &domain.ServiceEvent{ServiceRecordID: rec.ID, Status: rec.Status, Note: strings.TrimSpace(note)}
+	if err := s.Store.AddServiceEvent(ctx, userID, e); err != nil {
+		s.Logger.Error("service event", "err", err)
+	}
+}
+
+func (s *Server) handleDeleteServiceRecord(w http.ResponseWriter, r *http.Request) {
+	if err := s.Store.DeleteServiceRecord(r.Context(), userFrom(r.Context()).ID, r.PathValue("id")); err != nil {
+		s.storeError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *Server) handleChecklist(w http.ResponseWriter, r *http.Request) {

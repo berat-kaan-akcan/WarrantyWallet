@@ -20,6 +20,7 @@ type Store struct {
 	products   map[string]domain.Product
 	documents  map[string]domain.Document
 	services   map[string]domain.ServiceRecord
+	events     map[string][]domain.ServiceEvent // by service record id
 	notifs     map[string]domain.Notification
 	logs       []domain.ExtractionLog
 	categories map[string]domain.Category
@@ -33,7 +34,7 @@ var _ store.Store = (*Store)(nil)
 func New() *Store {
 	s := &Store{
 		users: map[string]domain.User{}, products: map[string]domain.Product{},
-		documents: map[string]domain.Document{}, services: map[string]domain.ServiceRecord{},
+		documents: map[string]domain.Document{}, services: map[string]domain.ServiceRecord{}, events: map[string][]domain.ServiceEvent{},
 		notifs: map[string]domain.Notification{}, categories: map[string]domain.Category{},
 		tokens: map[string]domain.AuthToken{},
 		now:    time.Now,
@@ -306,6 +307,7 @@ func (s *Store) deleteProductLocked(id string) {
 	for k, r := range s.services {
 		if r.ProductID == id {
 			delete(s.services, k)
+			delete(s.events, k)
 		}
 	}
 	for k, n := range s.notifs {
@@ -420,6 +422,52 @@ func (s *Store) UpdateServiceRecord(_ context.Context, r *domain.ServiceRecord) 
 	r.UpdatedAt = s.now().UTC()
 	s.services[r.ID] = *r
 	return nil
+}
+
+// DeleteServiceRecord removes an owned record and its timeline; linked documents are kept.
+func (s *Store) DeleteServiceRecord(_ context.Context, userID, id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	r, ok := s.services[id]
+	if !ok || r.UserID != userID {
+		return domain.ErrNotFound
+	}
+	delete(s.services, id)
+	delete(s.events, id)
+	for k, d := range s.documents {
+		if d.ServiceRecordID == id {
+			d.ServiceRecordID = ""
+			s.documents[k] = d
+		}
+	}
+	return nil
+}
+
+// AddServiceEvent appends to an owned record's timeline.
+func (s *Store) AddServiceEvent(_ context.Context, userID string, e *domain.ServiceEvent) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	r, ok := s.services[e.ServiceRecordID]
+	if !ok || r.UserID != userID {
+		return domain.ErrNotFound
+	}
+	if e.ID == "" {
+		e.ID = domain.NewID()
+	}
+	e.CreatedAt = s.now().UTC()
+	s.events[e.ServiceRecordID] = append(s.events[e.ServiceRecordID], *e)
+	return nil
+}
+
+// ListServiceEvents returns an owned record's timeline, oldest first.
+func (s *Store) ListServiceEvents(_ context.Context, userID, recordID string) ([]domain.ServiceEvent, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	r, ok := s.services[recordID]
+	if !ok || r.UserID != userID {
+		return nil, domain.ErrNotFound
+	}
+	return append([]domain.ServiceEvent{}, s.events[recordID]...), nil
 }
 
 // ReplaceNotifications replaces a product's pending reminders (sent ones are kept).

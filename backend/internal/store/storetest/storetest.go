@@ -239,6 +239,60 @@ func Run(t *testing.T, newStore func(t *testing.T) store.Store) {
 		}
 	})
 
+	t.Run("service_history", func(t *testing.T) {
+		s := newStore(t)
+		a := mkUser(t, s, "sh@x.io")
+		b := mkUser(t, s, "sh2@x.io")
+		p := &domain.Product{UserID: a, Name: "TV", PurchaseDate: domain.NewDate(2026, 1, 1), WarrantyMonths: 24, Currency: "TRY"}
+		if err := s.CreateProduct(ctx, p); err != nil {
+			t.Fatal(err)
+		}
+		sr := &domain.ServiceRecord{UserID: a, ProductID: p.ID, Problem: domain.ProblemOther, Status: domain.ServiceOpen}
+		if err := s.CreateServiceRecord(ctx, sr); err != nil {
+			t.Fatal(err)
+		}
+		resolved := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
+		sr.Status, sr.Cost, sr.ResolvedAt = domain.ServiceResolved, 1250.5, &resolved
+		if err := s.UpdateServiceRecord(ctx, sr); err != nil {
+			t.Fatal(err)
+		}
+		got, _ := s.GetServiceRecord(ctx, a, sr.ID)
+		if got.Cost != 1250.5 || got.ResolvedAt == nil || !got.ResolvedAt.Equal(resolved) {
+			t.Fatalf("cost/resolved_at %+v", got)
+		}
+		for _, st := range []domain.ServiceStatus{domain.ServiceOpen, domain.ServiceInService} {
+			if err := s.AddServiceEvent(ctx, a, &domain.ServiceEvent{ServiceRecordID: sr.ID, Status: st, Note: string(st)}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := s.AddServiceEvent(ctx, b, &domain.ServiceEvent{ServiceRecordID: sr.ID, Status: domain.ServiceOpen}); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatal("b added an event to a's record")
+		}
+		evs, err := s.ListServiceEvents(ctx, a, sr.ID)
+		if err != nil || len(evs) != 2 || evs[0].Status != domain.ServiceOpen || evs[1].Note != "in_service" || evs[0].ID == "" {
+			t.Fatalf("events %v %v", evs, err)
+		}
+		if _, err := s.ListServiceEvents(ctx, b, sr.ID); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatal("b listed a's events")
+		}
+		doc := &domain.Document{UserID: a, ProductID: p.ID, ServiceRecordID: sr.ID, Type: domain.DocPhoto, FileKey: "k"}
+		if err := s.CreateDocument(ctx, doc); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.DeleteServiceRecord(ctx, b, sr.ID); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatal("b deleted a's record")
+		}
+		if err := s.DeleteServiceRecord(ctx, a, sr.ID); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := s.GetServiceRecord(ctx, a, sr.ID); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatal("record not deleted")
+		}
+		if d, err := s.GetDocument(ctx, a, doc.ID); err != nil || d.ServiceRecordID != "" {
+			t.Fatalf("document should survive unlinked: %+v %v", d, err)
+		}
+	})
+
 	t.Run("notifications", func(t *testing.T) {
 		s := newStore(t)
 		a := mkUser(t, s, "n@x.io")

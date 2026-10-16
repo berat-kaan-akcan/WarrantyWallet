@@ -442,13 +442,18 @@ func (s *Store) DeleteDocument(ctx context.Context, userID, id string) error {
 
 // ---- service records ----
 
-const srCols = `id, user_id, product_id, problem, description, service_name, service_date, status, notes, under_warranty, created_at, updated_at`
+const srCols = `id, user_id, product_id, problem, description, service_name, service_date, status, notes, under_warranty, cost::float8, resolved_at, created_at, updated_at`
 
 func scanSR(row interface{ Scan(...any) error }) (domain.ServiceRecord, error) {
 	var r domain.ServiceRecord
 	var problem, status string
-	err := row.Scan(&r.ID, &r.UserID, &r.ProductID, &problem, &r.Description, &r.ServiceName, &r.ServiceDate, &status, &r.Notes, &r.UnderWarranty, &r.CreatedAt, &r.UpdatedAt)
+	var resolved sql.NullTime
+	err := row.Scan(&r.ID, &r.UserID, &r.ProductID, &problem, &r.Description, &r.ServiceName, &r.ServiceDate, &status, &r.Notes, &r.UnderWarranty, &r.Cost, &resolved, &r.CreatedAt, &r.UpdatedAt)
 	r.Problem, r.Status = domain.ProblemType(problem), domain.ServiceStatus(status)
+	if resolved.Valid {
+		t := resolved.Time
+		r.ResolvedAt = &t
+	}
 	return r, err
 }
 
@@ -461,11 +466,11 @@ func (s *Store) CreateServiceRecord(ctx context.Context, r *domain.ServiceRecord
 		r.ID = domain.NewID()
 	}
 	err := s.db.QueryRowContext(ctx, `INSERT INTO service_records (id, user_id, product_id, problem, description,
-		service_name, service_date, status, notes, under_warranty)
-		SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,$10 WHERE EXISTS (SELECT 1 FROM products WHERE id=$3 AND user_id=$2)
+		service_name, service_date, status, notes, under_warranty, cost, resolved_at)
+		SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12 WHERE EXISTS (SELECT 1 FROM products WHERE id=$3 AND user_id=$2)
 		RETURNING created_at, updated_at`,
 		r.ID, r.UserID, r.ProductID, string(r.Problem), r.Description, r.ServiceName, r.ServiceDate, string(r.Status),
-		r.Notes, r.UnderWarranty).Scan(&r.CreatedAt, &r.UpdatedAt)
+		r.Notes, r.UnderWarranty, r.Cost, r.ResolvedAt).Scan(&r.CreatedAt, &r.UpdatedAt)
 	return notFound(err)
 }
 
@@ -511,11 +516,64 @@ func (s *Store) UpdateServiceRecord(ctx context.Context, r *domain.ServiceRecord
 		return domain.ErrNotFound
 	}
 	err := s.db.QueryRowContext(ctx, `UPDATE service_records SET problem=$3, description=$4, service_name=$5,
-		service_date=$6, status=$7, notes=$8, under_warranty=$9, updated_at=now()
+		service_date=$6, status=$7, notes=$8, under_warranty=$9, cost=$10, resolved_at=$11, updated_at=now()
 		WHERE id=$1 AND user_id=$2 RETURNING created_at, updated_at`,
 		r.ID, r.UserID, string(r.Problem), r.Description, r.ServiceName, r.ServiceDate, string(r.Status), r.Notes,
-		r.UnderWarranty).Scan(&r.CreatedAt, &r.UpdatedAt)
+		r.UnderWarranty, r.Cost, r.ResolvedAt).Scan(&r.CreatedAt, &r.UpdatedAt)
 	return notFound(err)
+}
+
+// DeleteServiceRecord removes an owned record; its events cascade and documents are unlinked (FK SET NULL).
+func (s *Store) DeleteServiceRecord(ctx context.Context, userID, id string) error {
+	if !validUUID(id) {
+		return domain.ErrNotFound
+	}
+	res, err := s.db.ExecContext(ctx, `DELETE FROM service_records WHERE id=$1 AND user_id=$2`, id, userID)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
+// AddServiceEvent appends to an owned record's timeline.
+func (s *Store) AddServiceEvent(ctx context.Context, userID string, e *domain.ServiceEvent) error {
+	if !validUUID(e.ServiceRecordID) {
+		return domain.ErrNotFound
+	}
+	if e.ID == "" {
+		e.ID = domain.NewID()
+	}
+	err := s.db.QueryRowContext(ctx, `INSERT INTO service_events (id, service_record_id, status, note)
+		SELECT $1,$2,$3,$4 WHERE EXISTS (SELECT 1 FROM service_records WHERE id=$2 AND user_id=$5)
+		RETURNING created_at`, e.ID, e.ServiceRecordID, string(e.Status), e.Note, userID).Scan(&e.CreatedAt)
+	return notFound(err)
+}
+
+// ListServiceEvents returns an owned record's timeline, oldest first.
+func (s *Store) ListServiceEvents(ctx context.Context, userID, recordID string) ([]domain.ServiceEvent, error) {
+	if _, err := s.GetServiceRecord(ctx, userID, recordID); err != nil {
+		return nil, err
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT id, service_record_id, status, note, created_at FROM service_events
+		WHERE service_record_id=$1 ORDER BY created_at, id`, recordID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []domain.ServiceEvent{}
+	for rows.Next() {
+		var e domain.ServiceEvent
+		var status string
+		if err := rows.Scan(&e.ID, &e.ServiceRecordID, &status, &e.Note, &e.CreatedAt); err != nil {
+			return nil, err
+		}
+		e.Status = domain.ServiceStatus(status)
+		out = append(out, e)
+	}
+	return out, rows.Err()
 }
 
 // ---- notifications ----
