@@ -125,7 +125,9 @@ type ReceiptExtractor interface {
   application/json` + `responseSchema` (structured output) ile şu alanlar istenir: `product_name, brand,
   model, category, seller, purchase_date (YYYY-MM-DD), price, currency, warranty_months, serial_number`.
   Görsel varsa `inline_data` olarak gönderilir (OCR'ı model yapar), OCR metni de varsa ek bağlam olur.
-  Zaman aşımı (20 sn), 429/5xx için üstel geri çekilmeli en fazla 2 yeniden deneme.
+  Zaman aşımı (istek başına 25 sn, toplam 60 sn), 429/5xx için model başına 1 üstel geri çekilmeli yeniden deneme;
+  model hâlâ meşgulse (503), kotası dolmuşsa (429) ya da yoksa (404) `GEMINI_FALLBACK_MODELS` sırasıyla sonraki model denenir.
+  Varsayılan: `gemini-3.5-flash` → `gemini-2.5-flash`. Yanıttaki `model` alanı hangi modelin cevap verdiğini söyler.
 - **RuleExtractor**: Türkçe fiş metni için regex/sezgisel ayrıştırıcı (tarih biçimleri `12.09.2026`,
   `TOPLAM 12.499,00 TL`, bilinen satıcı/marka sözlüğü, "24 AY GARANTİ" vb.).
 - **FallbackExtractor**: önce Gemini; anahtar yoksa / 401-403 / kota (429) / zaman aşımı / geçersiz JSON

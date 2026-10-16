@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand/v2"
@@ -17,11 +18,11 @@ import (
 // The API key is sent ONLY in the x-goog-api-key header (never in URLs or logs).
 type GeminiExtractor struct {
 	APIKey     string
-	Model      string   // e.g. gemini-3.8-flash
-	Fallbacks  []string // models tried in order if Model is not found (404)
+	Model      string   // e.g. gemini-3.5-flash
+	Fallbacks  []string // models tried in order if Model is missing (404), overloaded (5xx) or rate limited (429)
 	BaseURL    string   // https://generativelanguage.googleapis.com/v1beta
 	HTTPClient *http.Client
-	MaxRetries int           // retries for 429/5xx/timeouts (default 2)
+	MaxRetries int           // retries per model for 429/5xx/timeouts (default 1; then the next model is tried)
 	Backoff    time.Duration // base backoff (default 1s)
 	Today      func() time.Time
 }
@@ -158,6 +159,12 @@ func (g *GeminiExtractor) Extract(ctx context.Context, in Input) (Result, error)
 			continue
 		}
 		if err != nil {
+			// A busy (503) or rate-limited (429) model is common on the free tier; another
+			// model usually answers, so move on unless the request itself has run out of time.
+			if (errors.Is(err, ErrUnavailable) || errors.Is(err, ErrQuota)) && ctx.Err() == nil {
+				lastErr = fmt.Errorf("%s: %w", model, err)
+				continue
+			}
 			return Result{}, err
 		}
 		f, err := parseGeminiJSON(raw)
@@ -165,7 +172,7 @@ func (g *GeminiExtractor) Extract(ctx context.Context, in Input) (Result, error)
 			return Result{}, err
 		}
 		f, missing := Clean(f)
-		return Result{Fields: f, Provider: "gemini", RawText: strings.TrimSpace(in.Text), Missing: missing}, nil
+		return Result{Fields: f, Provider: "gemini", Model: model, RawText: strings.TrimSpace(in.Text), Missing: missing}, nil
 	}
 	if lastErr == nil {
 		lastErr = ErrNotConfigured
@@ -178,7 +185,7 @@ var errModelNotFound = fmt.Errorf("model not found")
 func (g *GeminiExtractor) callWithRetry(ctx context.Context, model string, body []byte) (string, error) {
 	retries := g.MaxRetries
 	if retries == 0 {
-		retries = 2
+		retries = 1
 	}
 	backoff := g.Backoff
 	if backoff == 0 {

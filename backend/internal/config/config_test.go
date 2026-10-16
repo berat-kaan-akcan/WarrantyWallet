@@ -35,3 +35,15 @@ func TestOverridesAndProduction(t *testing.T) {
 		t.Fatal("short secret must fail in production")
 	}
 }
+
+func TestGeminiFallbackModels(t *testing.T) {
+	c, _ := Load(func(string) string { return "" })
+	if len(c.GeminiFallbacks) != 1 || c.GeminiFallbacks[0] != "gemini-2.5-flash" {
+		t.Fatalf("default fallbacks %v", c.GeminiFallbacks)
+	}
+	env := map[string]string{"GEMINI_MODEL": "m1", "GEMINI_FALLBACK_MODELS": " m1, m2 ,,m3"}
+	c, _ = Load(func(k string) string { return env[k] })
+	if len(c.GeminiFallbacks) != 2 || c.GeminiFallbacks[0] != "m2" || c.GeminiFallbacks[1] != "m3" {
+		t.Fatalf("fallbacks %v", c.GeminiFallbacks)
+	}
+}

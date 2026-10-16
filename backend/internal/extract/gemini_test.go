@@ -74,8 +74,32 @@ func TestGeminiRetriesThenQuota(t *testing.T) {
 	if !errors.Is(err, ErrQuota) {
 		t.Fatalf("want quota err, got %v", err)
 	}
-	if calls != 3 {
-		t.Fatalf("expected 1 call + 2 retries, got %d", calls)
+	if calls != 2 {
+		t.Fatalf("expected 1 call + 1 retry, got %d", calls)
+	}
+}
+
+func TestGeminiOverloadedModelFallsBackToNext(t *testing.T) {
+	var busy, other int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "gemini-test") {
+			atomic.AddInt32(&busy, 1)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = io.WriteString(w, `{"error":{"code":503,"status":"UNAVAILABLE","message":"high demand"}}`)
+			return
+		}
+		atomic.AddInt32(&other, 1)
+		_, _ = io.WriteString(w, geminiOK(`{"product_name":"X","category":"other"}`))
+	}))
+	defer srv.Close()
+	g := newGemini(srv.URL)
+	g.Fallbacks = []string{"gemini-other"}
+	res, err := g.Extract(context.Background(), Input{Text: "x"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Model != "gemini-other" || busy != 2 || other != 1 {
+		t.Fatalf("model=%q busy=%d other=%d", res.Model, busy, other)
 	}
 }
 

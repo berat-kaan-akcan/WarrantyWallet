@@ -35,7 +35,8 @@ type Fields struct {
 // Result of an extraction.
 type Result struct {
 	Fields   Fields   `json:"fields"`
-	Provider string   `json:"provider"` // "gemini" | "rules"
+	Provider string   `json:"provider"`        // "gemini" | "rules"
+	Model    string   `json:"model,omitempty"` // Gemini model that answered
 	RawText  string   `json:"raw_text,omitempty"`
 	Missing  []string `json:"missing"`            // fields the user must fill in
 	Warnings []string `json:"warnings,omitempty"` // e.g. "gemini unavailable: quota exceeded"

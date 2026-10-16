@@ -130,3 +130,10 @@ func check(t *testing.T, name, got, want string) {
 		t.Errorf("%s: got %q want %q", name, got, want)
 	}
 }
+
+func TestRuleExtractorTurkishSerialLabel(t *testing.T) {
+	f := ParseText("TEKNOSA\nSONY WH-1000XM5 KULAKLIK 11.999,00\nSERİ NO: 5023417\nTOPLAM *11.999,00 TL")
+	if f.SerialNumber != "5023417" {
+		t.Fatalf("serial %q", f.SerialNumber)
+	}
+}

@@ -78,6 +78,7 @@ func (s *Server) handleExtract(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadGateway, "extraction_failed", "could not read the receipt; please fill in manually", nil)
 		return
 	}
+	s.Logger.Info("receipt extracted", "provider", res.Provider, "model", res.Model, "missing", len(res.Missing))
 	months := res.Fields.WarrantyMonths
 	suggested := months
 	if suggested == 0 {
@@ -90,6 +91,7 @@ func (s *Server) handleExtract(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"fields":                    res.Fields,
 		"provider":                  res.Provider,
+		"model":                     res.Model,
 		"missing":                   res.Missing,
 		"warnings":                  res.Warnings,
 		"raw_text":                  res.RawText,

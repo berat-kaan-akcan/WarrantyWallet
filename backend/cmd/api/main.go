@@ -74,7 +74,7 @@ func run(logger *slog.Logger) error {
 	gem := &extract.GeminiExtractor{
 		APIKey:     cfg.GeminiAPIKey,
 		Model:      cfg.GeminiModel,
-		Fallbacks:  []string{"gemini-3.5-flash-lite", "gemini-2.5-flash"},
+		Fallbacks:  cfg.GeminiFallbacks,
 		BaseURL:    cfg.GeminiBaseURL,
 		HTTPClient: &http.Client{Timeout: cfg.GeminiTimeout},
 	}
@@ -82,7 +82,7 @@ func run(logger *slog.Logger) error {
 	if cfg.GeminiAPIKey == "" {
 		logger.Warn("GEMINI_API_KEY not set: receipt extraction uses the rule-based parser only")
 	} else {
-		logger.Info("gemini extraction enabled", "model", cfg.GeminiModel)
+		logger.Info("gemini extraction enabled", "model", cfg.GeminiModel, "fallbacks", cfg.GeminiFallbacks)
 	}
 
 	srv := &httpapi.Server{

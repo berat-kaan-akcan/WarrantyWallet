@@ -6,7 +6,7 @@ Son güncelleme: 2026-10-16
 - **Backend (Go):** V1 uç noktalarının tamamı yazıldı; `go vet` temiz, `go test ./...` yeşil (birim + handler/entegrasyon testleri).
 - **PostgreSQL:** migration ve tüm SQL sorguları yerel PostgreSQL 16'da `PREPARE` ile doğrulandı; pgx sürücüsüyle store sözleşme testleri CI'da çalışır.
 - **Mobil (Flutter):** Flutter 3.47.7 (Dart 3.13.5) ile `flutter analyze` 0 sorun, `flutter test` 19/19 geçti. `android/` ve `ios/` üretildi, izinler eklendi. Yerelde Android SDK indirilemediği için (dl.google.com engelli) APK derlemesi CI'daki `mobile-android` işine bırakıldı.
-- **Gemini:** entegrasyon + mock testleri hazır. Bu oturumda `generativelanguage.googleapis.com` ağ politikası tarafından engellendiği için canlı çağrı başarısız oldu; yedek ayrıştırıcıya otomatik geçiş canlı doğrulandı.
+- **Gemini:** canlı doğrulandı (2026-10-16). Varsayılan model `gemini-3.5-flash`, yedek `gemini-2.5-flash`. Türkçe fiş metni ve fiş görseli doğru alanlarla çıkarıldı.
 
 ## Tamamlananlar
 - [x] Repo iskeleti, README, ARCHITECTURE, .gitignore, .env.example
@@ -30,6 +30,12 @@ Son güncelleme: 2026-10-16
    Yerel PostgreSQL 16.15 üzerinde `TEST_DATABASE_URL=... go test -tags pgx ./internal/store/postgres/` → tüm sözleşme testleri geçti (hata çıkmadı).
    Dockerfile artık `go.mod/go.sum` ile katmanlı `go mod download` yapıyor (derleme sırasında `go get` yok). CI: `go-version-file`, `go mod tidy` farkı kontrolü, `-tags pgx` ile build + vet.
    Not: bu ortamda Docker Hub 429 verdi ve konteyner içinden `apk` erişemedi; build aşaması (Go derleme) yerelde doğrulandı, tam imaj CI'daki `docker` işinde derlenir.
+3. **Uçtan uca test** — Docker Hub 429 verdiği ve imaj içinden `apk` erişemediği için API `-tags pgx` ile doğrudan, yerel PostgreSQL 16'ya bağlı çalıştırıldı (migration açılışta uygulandı). curl ile denenenler, hepsi beklenen yanıtı verdi:
+   register → login → ürün oluşturma (bitiş 2028-09-12, 697 gün) → belge yükleme (JPEG, 55 KB) → belge listesi → `/extract` (metin + görsel) → servis kaydı (`screen_lines`) → PATCH `in_service` → checklist → `service-pack.pdf` (200, `application/pdf`, 58 KB) → dashboard → bildirimler (90/30/7) → expiring → admin `stats`/`extraction-logs` (yetkisiz token → 401).
+   **Canlı Gemini:** `gemini-3.8-flash` ve `gemini-3.7-flash` bu saatlerde sürekli `503 UNAVAILABLE (high demand)` döndü; ilk denemede metin istekleri kural tabanlı ayrıştırıcıya, görsel istek zaman aşımına düştü. `gemini-3.5-flash` ve `gemini-2.5-flash` çalıştı.
+   Kararlar: (a) varsayılan model **`gemini-3.5-flash`** yapıldı (görsel ~5-12 sn, metin ~8 sn); (b) yedek zinciri artık 404'e ek olarak 503/429'da da sonraki modele geçiyor, model başına 1 yeniden deneme; `GEMINI_FALLBACK_MODELS` ile ayarlanabilir (varsayılan `gemini-2.5-flash`); (c) `/extract` yanıtına `model` alanı ve log satırı eklendi.
+   Sonuçlar (gemini-3.5-flash): Teknosa metni → Sony WH-1000XM5, kulaklık, 03.10.2026, 11.999 TL, 24 ay, seri 5023417. MediaMarkt fiş görseli → ASUS VG27AQ, monitör, 12.09.2026, 12.499 TL, 24 ay, seri R9LMQS123456. Eksik alan yok.
+   Ek düzeltme: kural tabanlı ayrıştırıcı `SERİ NO` (Türkçe İ) etiketini kaçırıyordu; düzeltildi ve test eklendi.
 
 ## Kalanlar / sonraki adımlar
 - [ ] CI'da mobil analiz/test sonuçlarını kontrol edip olası hataları düzeltmek
@@ -42,6 +48,6 @@ Son güncelleme: 2026-10-16
 - Go: yalnızca standart kütüphane (net/http, crypto/pbkdf2, elle HS256 JWT). PostgreSQL sürücüsü `-tags pgx` ile bağlanır.
 - V1'de Redis yok; bildirimler cihazda yerel + sunucuda tablo/işçi.
 - Gemini çağrısı yalnızca backend'de; anahtar yoksa/kota dolarsa kural tabanlı ayrıştırıcı.
-- Varsayılan model `gemini-3.8-flash` (ücretsiz katmanda, görsel + structured output destekli); 404 alınırsa `gemini-3.5-flash-lite`, `gemini-2.5-flash` denenir.
+- Varsayılan model `gemini-3.5-flash` (2026-10-16 canlı testte çalışan, görsel + structured output destekli); meşgul/kota/404 durumunda `gemini-2.5-flash` denenir. `gemini-3.8-flash` test sırasında sürekli 503 verdiği için varsayılan olmaktan çıkarıldı (`GEMINI_MODEL` ile seçilebilir).
 - `android/`/`ios/` klasörleri artık repoda (2026-10-16): izinlerin herkes için aynı olması için.
 - Flutter sürümü CI'da 3.47.7'ye sabitlendi.

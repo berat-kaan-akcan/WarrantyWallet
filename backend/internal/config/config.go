@@ -11,19 +11,20 @@ import (
 
 // Config is the backend configuration.
 type Config struct {
-	HTTPAddr      string
-	DatabaseURL   string // empty → in-memory store (dev/demo only)
-	JWTSecret     string
-	TokenTTL      time.Duration
-	StorageDir    string
-	MaxUploadMB   int64
-	GeminiAPIKey  string
-	GeminiModel   string
-	GeminiBaseURL string
-	GeminiTimeout time.Duration
-	CORSOrigins   string
-	AdminEmails   []string
-	NotifyEvery   time.Duration
+	HTTPAddr        string
+	DatabaseURL     string // empty → in-memory store (dev/demo only)
+	JWTSecret       string
+	TokenTTL        time.Duration
+	StorageDir      string
+	MaxUploadMB     int64
+	GeminiAPIKey    string
+	GeminiModel     string
+	GeminiFallbacks []string
+	GeminiBaseURL   string
+	GeminiTimeout   time.Duration
+	CORSOrigins     string
+	AdminEmails     []string
+	NotifyEvery     time.Duration
 }
 
 // Load reads configuration from the environment (getenv is injectable for tests).
@@ -39,11 +40,16 @@ func Load(getenv func(string) string) (Config, error) {
 		StorageDir:    def(getenv("STORAGE_DIR"), "./uploads"),
 		MaxUploadMB:   int64(num(getenv("MAX_UPLOAD_MB"), 10)),
 		GeminiAPIKey:  strings.TrimSpace(getenv("GEMINI_API_KEY")),
-		GeminiModel:   def(getenv("GEMINI_MODEL"), "gemini-3.8-flash"),
+		GeminiModel:   def(getenv("GEMINI_MODEL"), "gemini-3.5-flash"),
 		GeminiBaseURL: def(getenv("GEMINI_BASE_URL"), "https://generativelanguage.googleapis.com/v1beta"),
 		GeminiTimeout: dur(getenv("GEMINI_TIMEOUT"), 25*time.Second),
 		CORSOrigins:   def(getenv("CORS_ORIGINS"), "*"),
 		NotifyEvery:   dur(getenv("NOTIFY_INTERVAL"), 15*time.Minute),
+	}
+	for _, m := range strings.Split(def(getenv("GEMINI_FALLBACK_MODELS"), "gemini-2.5-flash"), ",") {
+		if m = strings.TrimSpace(m); m != "" && m != c.GeminiModel {
+			c.GeminiFallbacks = append(c.GeminiFallbacks, m)
+		}
 	}
 	for _, e := range strings.Split(getenv("ADMIN_EMAILS"), ",") {
 		if e = strings.ToLower(strings.TrimSpace(e)); e != "" {

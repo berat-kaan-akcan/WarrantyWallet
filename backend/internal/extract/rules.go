@@ -79,6 +79,11 @@ func fold(s string) string {
 	return strings.ToLower(r.Replace(s))
 }
 
+// trASCII maps Turkish letters to their ASCII look-alikes, keeping case ("SERİ" → "SERI"),
+// so case-insensitive ASCII regexes match Turkish labels.
+var trASCII = strings.NewReplacer("İ", "I", "ı", "i", "Ş", "S", "ş", "s", "Ğ", "G", "ğ", "g",
+	"Ü", "U", "ü", "u", "Ö", "O", "ö", "o", "Ç", "C", "ç", "c")
+
 // ParseText applies all heuristics to OCR text.
 func ParseText(text string) Fields {
 	lines := splitLines(text)
@@ -90,7 +95,7 @@ func ParseText(text string) Fields {
 	f.Seller = findSeller(lines, folded)
 	f.Brand = findBrand(lines, f.Seller)
 	f.ProductName, f.Model = findProduct(lines, f.Brand)
-	if m := reSerial.FindStringSubmatch(text); m != nil {
+	if m := reSerial.FindStringSubmatch(trASCII.Replace(text)); m != nil {
 		f.SerialNumber = strings.ToUpper(m[1])
 	}
 	f.Category = GuessCategory(f.ProductName + " " + f.Model + " " + text)
