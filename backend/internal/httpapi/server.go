@@ -12,6 +12,7 @@ import (
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/auth"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/domain"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/extract"
+	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/mail"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/storage"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/store"
 )
@@ -22,6 +23,9 @@ type Server struct {
 	Files       storage.Storage
 	Extractor   extract.ReceiptExtractor
 	Tokens      auth.Tokens
+	RefreshTTL  time.Duration // refresh token lifetime (default 30 days)
+	Mailer      mail.Sender
+	TrustProxy  bool // honour X-Forwarded-For (only behind a trusted reverse proxy)
 	Hasher      auth.Hasher
 	Logger      *slog.Logger
 	MaxUpload   int64 // bytes
@@ -57,9 +61,11 @@ func (s *Server) Handler() http.Handler {
 	if s.authLimiter == nil {
 		s.authLimiter = newRateLimiter(10, time.Minute) // 10 auth attempts / minute / IP
 	}
+	s.authLimiter.trustProxy = s.TrustProxy
 	if s.extractLimiter == nil {
 		s.extractLimiter = newRateLimiter(20, time.Minute)
 	}
+	s.extractLimiter.trustProxy = s.TrustProxy
 	mux := http.NewServeMux()
 	a := s.requireAuth
 	admin := func(h http.HandlerFunc) http.Handler { return s.requireAuth(s.requireAdmin(h)) }
@@ -69,7 +75,13 @@ func (s *Server) Handler() http.Handler {
 
 	mux.Handle("POST /api/v1/auth/register", s.authLimiter.wrap(http.HandlerFunc(s.handleRegister)))
 	mux.Handle("POST /api/v1/auth/login", s.authLimiter.wrap(http.HandlerFunc(s.handleLogin)))
+	mux.Handle("POST /api/v1/auth/refresh", s.authLimiter.wrap(http.HandlerFunc(s.handleRefresh)))
+	mux.Handle("POST /api/v1/auth/logout", a(http.HandlerFunc(s.handleLogout)))
+	mux.Handle("POST /api/v1/auth/password/forgot", s.authLimiter.wrap(http.HandlerFunc(s.handleForgotPassword)))
+	mux.Handle("POST /api/v1/auth/password/reset", s.authLimiter.wrap(http.HandlerFunc(s.handleResetPassword)))
 	mux.Handle("GET /api/v1/me", a(http.HandlerFunc(s.handleMe)))
+	mux.Handle("PATCH /api/v1/me", a(http.HandlerFunc(s.handleUpdateMe)))
+	mux.Handle("PUT /api/v1/me/password", a(http.HandlerFunc(s.handleChangePassword)))
 	mux.Handle("DELETE /api/v1/me", a(http.HandlerFunc(s.handleDeleteMe)))
 
 	mux.Handle("GET /api/v1/categories", a(http.HandlerFunc(s.handleCategories)))

@@ -36,11 +36,15 @@ Son güncelleme: 2026-10-16
    Kararlar: (a) varsayılan model **`gemini-3.5-flash`** yapıldı (görsel ~5-12 sn, metin ~8 sn); (b) yedek zinciri artık 404'e ek olarak 503/429'da da sonraki modele geçiyor, model başına 1 yeniden deneme; `GEMINI_FALLBACK_MODELS` ile ayarlanabilir (varsayılan `gemini-2.5-flash`); (c) `/extract` yanıtına `model` alanı ve log satırı eklendi.
    Sonuçlar (gemini-3.5-flash): Teknosa metni → Sony WH-1000XM5, kulaklık, 03.10.2026, 11.999 TL, 24 ay, seri 5023417. MediaMarkt fiş görseli → ASUS VG27AQ, monitör, 12.09.2026, 12.499 TL, 24 ay, seri R9LMQS123456. Eksik alan yok.
    Ek düzeltme: kural tabanlı ayrıştırıcı `SERİ NO` (Türkçe İ) etiketini kaçırıyordu; düzeltildi ve test eklendi.
+4. **CI** — `gh run list`: 1. ve 2. commit'lerin CI koşuları yeşil (backend, PostgreSQL entegrasyon, Docker imajı, mobil analiz/test, Android debug APK). Node 20 uyarıları için `checkout@v5`, `setup-go@v6`, `setup-java@v5`'e geçildi.
+5. **V1 iyileştirmeleri (güvenlik)** — refresh token (opak, 256 bit, yalnızca SHA-256 özeti saklanır, tek kullanımlık rotasyon, 30 gün), access token 7 gün → **1 saat**; `POST /auth/refresh`, `POST /auth/logout` (tek token veya `all`), şifre sıfırlama iskeleti (`/auth/password/forgot` her zaman 202 → hesap ifşası yok; `/auth/password/reset` tek kullanımlık, 1 saat, yalnızca en yeni bağlantı geçerli; başarılı sıfırlamada tüm oturumlar kapanır), `PUT /me/password`, `PATCH /me`. E-posta gönderimi `mail.Sender` arayüzünün arkasında; V1'de yalnızca maskeli log (`LogSender`, token loglanmaz).
+   Güvenlik düzeltmesi: hız sınırlayıcı `X-Forwarded-For`'a koşulsuz güveniyordu (başlığı değiştirerek sınır aşılabiliyordu); artık yalnızca `TRUST_PROXY=true` iken kullanılıyor. Migration `0002_auth_tokens.sql`.
 
 ## Kalanlar / sonraki adımlar
 - [ ] CI'da mobil analiz/test sonuçlarını kontrol edip olası hataları düzeltmek
 - [ ] V2: barkod/QR ve seri numarası tarama, AI arıza asistanı, servis merkezi bulma, aile hesabı, bulut yedekleme
-- [ ] Refresh token, e-posta doğrulama, şifre sıfırlama
+- [x] Refresh token, şifre sıfırlama iskeleti
+- [ ] E-posta doğrulama ve gerçek SMTP gönderici
 - [ ] S3/MinIO depolama uygulaması, FCM push
 
 ## Alınan kararlar

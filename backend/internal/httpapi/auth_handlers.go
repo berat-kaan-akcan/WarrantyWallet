@@ -15,9 +15,24 @@ import (
 )
 
 type authResponse struct {
-	Token     string      `json:"token"`
-	ExpiresAt time.Time   `json:"expires_at"`
-	User      domain.User `json:"user"`
+	Token            string      `json:"token"`
+	ExpiresAt        time.Time   `json:"expires_at"`
+	RefreshToken     string      `json:"refresh_token"`
+	RefreshExpiresAt time.Time   `json:"refresh_expires_at"`
+	User             domain.User `json:"user"`
+}
+
+// passwordProblem returns a validation message or "".
+func passwordProblem(p string) string {
+	switch {
+	case utf8.RuneCountInString(p) < auth.MinPasswordLen:
+		return "must be at least 8 characters"
+	case len(p) > 128:
+		return "must be at most 128 characters"
+	case strings.TrimSpace(p) == "":
+		return "must not be blank"
+	}
+	return ""
 }
 
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
@@ -35,10 +50,8 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	if a, err := mail.ParseAddress(in.Email); err != nil || a.Address != in.Email || len(in.Email) > 254 {
 		fields["email"] = "invalid email address"
 	}
-	if utf8.RuneCountInString(in.Password) < auth.MinPasswordLen {
-		fields["password"] = "must be at least 8 characters"
-	} else if len(in.Password) > 128 {
-		fields["password"] = "must be at most 128 characters"
+	if msg := passwordProblem(in.Password); msg != "" {
+		fields["password"] = msg
 	}
 	if utf8.RuneCountInString(in.Name) > 100 {
 		fields["name"] = "max 100 characters"
@@ -64,7 +77,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		s.storeError(w, err)
 		return
 	}
-	s.respondWithToken(w, http.StatusCreated, *u)
+	s.respondWithToken(w, r, http.StatusCreated, *u)
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -85,16 +98,30 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "invalid_credentials", "email or password is incorrect", nil)
 		return
 	}
-	s.respondWithToken(w, http.StatusOK, u)
+	s.respondWithToken(w, r, http.StatusOK, u)
 }
 
-func (s *Server) respondWithToken(w http.ResponseWriter, status int, u domain.User) {
+func (s *Server) respondWithToken(w http.ResponseWriter, r *http.Request, status int, u domain.User) {
 	tok, exp, err := s.Tokens.Issue(u.ID, string(u.Role))
 	if err != nil {
 		s.storeError(w, err)
 		return
 	}
-	writeJSON(w, status, authResponse{Token: tok, ExpiresAt: exp, User: u})
+	plain, hash, err := auth.NewOpaqueToken()
+	if err != nil {
+		s.storeError(w, err)
+		return
+	}
+	ttl := s.RefreshTTL
+	if ttl <= 0 {
+		ttl = 30 * 24 * time.Hour
+	}
+	rt := &domain.AuthToken{UserID: u.ID, Kind: domain.TokenRefresh, TokenHash: hash, ExpiresAt: s.now().Add(ttl).UTC()}
+	if err := s.Store.CreateAuthToken(r.Context(), rt); err != nil {
+		s.storeError(w, err)
+		return
+	}
+	writeJSON(w, status, authResponse{Token: tok, ExpiresAt: exp, RefreshToken: plain, RefreshExpiresAt: rt.ExpiresAt, User: u})
 }
 
 func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {

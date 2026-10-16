@@ -23,6 +23,7 @@ type Store struct {
 	notifs     map[string]domain.Notification
 	logs       []domain.ExtractionLog
 	categories map[string]domain.Category
+	tokens     map[string]domain.AuthToken // by hash
 	now        func() time.Time
 }
 
@@ -34,7 +35,8 @@ func New() *Store {
 		users: map[string]domain.User{}, products: map[string]domain.Product{},
 		documents: map[string]domain.Document{}, services: map[string]domain.ServiceRecord{},
 		notifs: map[string]domain.Notification{}, categories: map[string]domain.Category{},
-		now: time.Now,
+		tokens: map[string]domain.AuthToken{},
+		now:    time.Now,
 	}
 	for _, c := range domain.DefaultCategories {
 		s.categories[c.Slug] = c
@@ -123,9 +125,86 @@ func (s *Store) DeleteUser(_ context.Context, id string) error {
 		return domain.ErrNotFound
 	}
 	delete(s.users, id)
+	for h, t := range s.tokens {
+		if t.UserID == id {
+			delete(s.tokens, h)
+		}
+	}
 	for k, p := range s.products {
 		if p.UserID == id {
 			s.deleteProductLocked(k)
+		}
+	}
+	return nil
+}
+
+// UpdateUserProfile changes the display name.
+func (s *Store) UpdateUserProfile(_ context.Context, id, name string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	u, ok := s.users[id]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	u.Name = name
+	s.users[id] = u
+	return nil
+}
+
+// SetUserPassword replaces the password hash.
+func (s *Store) SetUserPassword(_ context.Context, id, hash string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	u, ok := s.users[id]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	u.PasswordHash = hash
+	s.users[id] = u
+	return nil
+}
+
+// CreateAuthToken stores a hashed token.
+func (s *Store) CreateAuthToken(_ context.Context, t *domain.AuthToken) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.users[t.UserID]; !ok {
+		return domain.ErrNotFound
+	}
+	if _, ok := s.tokens[t.TokenHash]; ok {
+		return domain.ErrConflict
+	}
+	if t.ID == "" {
+		t.ID = domain.NewID()
+	}
+	t.CreatedAt = s.now().UTC()
+	s.tokens[t.TokenHash] = *t
+	return nil
+}
+
+// ConsumeAuthToken marks a valid token as used.
+func (s *Store) ConsumeAuthToken(_ context.Context, kind domain.AuthTokenKind, hash string, now time.Time) (domain.AuthToken, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	t, ok := s.tokens[hash]
+	if !ok || t.Kind != kind || t.UsedAt != nil || !now.Before(t.ExpiresAt) {
+		return domain.AuthToken{}, domain.ErrNotFound
+	}
+	at := now.UTC()
+	t.UsedAt = &at
+	s.tokens[hash] = t
+	return t, nil
+}
+
+// RevokeAuthTokens marks all unused tokens of a kind as used.
+func (s *Store) RevokeAuthTokens(_ context.Context, userID string, kind domain.AuthTokenKind, now time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	at := now.UTC()
+	for h, t := range s.tokens {
+		if t.UserID == userID && t.Kind == kind && t.UsedAt == nil {
+			t.UsedAt = &at
+			s.tokens[h] = t
 		}
 	}
 	return nil

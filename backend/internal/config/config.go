@@ -15,6 +15,8 @@ type Config struct {
 	DatabaseURL     string // empty → in-memory store (dev/demo only)
 	JWTSecret       string
 	TokenTTL        time.Duration
+	RefreshTTL      time.Duration
+	TrustProxy      bool
 	StorageDir      string
 	MaxUploadMB     int64
 	GeminiAPIKey    string
@@ -36,7 +38,9 @@ func Load(getenv func(string) string) (Config, error) {
 		HTTPAddr:      def(getenv("HTTP_ADDR"), ":8080"),
 		DatabaseURL:   getenv("DATABASE_URL"),
 		JWTSecret:     getenv("JWT_SECRET"),
-		TokenTTL:      dur(getenv("TOKEN_TTL"), 7*24*time.Hour),
+		TokenTTL:      dur(getenv("TOKEN_TTL"), time.Hour),
+		RefreshTTL:    dur(getenv("REFRESH_TTL"), 30*24*time.Hour),
+		TrustProxy:    strings.EqualFold(strings.TrimSpace(getenv("TRUST_PROXY")), "true"),
 		StorageDir:    def(getenv("STORAGE_DIR"), "./uploads"),
 		MaxUploadMB:   int64(num(getenv("MAX_UPLOAD_MB"), 10)),
 		GeminiAPIKey:  strings.TrimSpace(getenv("GEMINI_API_KEY")),

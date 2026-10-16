@@ -26,6 +26,16 @@ type Store interface {
 	ListUsers(ctx context.Context) ([]domain.User, error)
 	SetUserRole(ctx context.Context, id string, role domain.Role) error
 	DeleteUser(ctx context.Context, id string) error
+	UpdateUserProfile(ctx context.Context, id, name string) error
+	SetUserPassword(ctx context.Context, id, passwordHash string) error
+
+	// Opaque auth tokens (refresh / password reset), stored hashed.
+	CreateAuthToken(ctx context.Context, t *domain.AuthToken) error
+	// ConsumeAuthToken atomically marks an unused, unexpired token as used and returns it;
+	// ErrNotFound when it is unknown, already used or expired.
+	ConsumeAuthToken(ctx context.Context, kind domain.AuthTokenKind, hash string, now time.Time) (domain.AuthToken, error)
+	// RevokeAuthTokens marks all unused tokens of the kind for the user as used.
+	RevokeAuthTokens(ctx context.Context, userID string, kind domain.AuthTokenKind, now time.Time) error
 
 	CreateProduct(ctx context.Context, p *domain.Product) error
 	GetProduct(ctx context.Context, userID, id string) (domain.Product, error)

@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -149,4 +150,21 @@ func (t Tokens) sign(s string) []byte {
 	m := hmac.New(sha256.New, t.Secret)
 	m.Write([]byte(s))
 	return m.Sum(nil)
+}
+
+// NewOpaqueToken returns a random URL-safe token (256 bits) and its storage hash.
+func NewOpaqueToken() (plain, hash string, err error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", "", err
+	}
+	plain = b64.EncodeToString(b)
+	return plain, HashOpaqueToken(plain), nil
+}
+
+// HashOpaqueToken is the SHA-256 hex digest stored instead of the plaintext token.
+// A fast hash is fine here: the input is 256 random bits, not a guessable password.
+func HashOpaqueToken(plain string) string {
+	sum := sha256.Sum256([]byte(plain))
+	return hex.EncodeToString(sum[:])
 }

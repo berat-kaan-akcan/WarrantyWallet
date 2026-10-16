@@ -75,3 +75,17 @@ func TestTokens(t *testing.T) {
 		t.Fatal("empty secret must fail")
 	}
 }
+
+func TestOpaqueToken(t *testing.T) {
+	a, ha, err := NewOpaqueToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, hb, _ := NewOpaqueToken()
+	if a == b || ha == hb || len(a) < 40 || len(ha) != 64 {
+		t.Fatalf("tokens not random/hashed: %q %q", a, ha)
+	}
+	if HashOpaqueToken(a) != ha || ha == a {
+		t.Fatal("hash mismatch")
+	}
+}

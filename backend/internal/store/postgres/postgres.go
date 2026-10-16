@@ -206,6 +206,70 @@ func (s *Store) DeleteUser(ctx context.Context, id string) error {
 	return affected(s.db.ExecContext(ctx, `DELETE FROM users WHERE id=$1`, id))
 }
 
+// UpdateUserProfile changes the display name.
+func (s *Store) UpdateUserProfile(ctx context.Context, id, name string) error {
+	if !validUUID(id) {
+		return domain.ErrNotFound
+	}
+	return affected(s.db.ExecContext(ctx, `UPDATE users SET name=$2 WHERE id=$1`, id, name))
+}
+
+// SetUserPassword replaces the password hash.
+func (s *Store) SetUserPassword(ctx context.Context, id, hash string) error {
+	if !validUUID(id) {
+		return domain.ErrNotFound
+	}
+	return affected(s.db.ExecContext(ctx, `UPDATE users SET password_hash=$2 WHERE id=$1`, id, hash))
+}
+
+// ---- auth tokens ----
+
+// CreateAuthToken stores a hashed token.
+func (s *Store) CreateAuthToken(ctx context.Context, t *domain.AuthToken) error {
+	if !validUUID(t.UserID) {
+		return domain.ErrNotFound
+	}
+	if t.ID == "" {
+		t.ID = domain.NewID()
+	}
+	err := s.db.QueryRowContext(ctx,
+		`INSERT INTO auth_tokens (id, user_id, kind, token_hash, expires_at) VALUES ($1,$2,$3,$4,$5) RETURNING created_at`,
+		t.ID, t.UserID, string(t.Kind), t.TokenHash, t.ExpiresAt).Scan(&t.CreatedAt)
+	switch {
+	case isUniqueViolation(err):
+		return domain.ErrConflict
+	case isFKViolation(err):
+		return domain.ErrNotFound
+	}
+	return err
+}
+
+// ConsumeAuthToken atomically marks a valid token as used.
+func (s *Store) ConsumeAuthToken(ctx context.Context, kind domain.AuthTokenKind, hash string, now time.Time) (domain.AuthToken, error) {
+	var t domain.AuthToken
+	var k string
+	var used time.Time
+	err := s.db.QueryRowContext(ctx, `UPDATE auth_tokens SET used_at=$3
+		WHERE kind=$1 AND token_hash=$2 AND used_at IS NULL AND expires_at > $3
+		RETURNING id, user_id, kind, token_hash, expires_at, used_at, created_at`, string(kind), hash, now).
+		Scan(&t.ID, &t.UserID, &k, &t.TokenHash, &t.ExpiresAt, &used, &t.CreatedAt)
+	if err != nil {
+		return domain.AuthToken{}, notFound(err)
+	}
+	t.Kind, t.UsedAt = domain.AuthTokenKind(k), &used
+	return t, nil
+}
+
+// RevokeAuthTokens marks all unused tokens of a kind as used.
+func (s *Store) RevokeAuthTokens(ctx context.Context, userID string, kind domain.AuthTokenKind, now time.Time) error {
+	if !validUUID(userID) {
+		return nil
+	}
+	_, err := s.db.ExecContext(ctx, `UPDATE auth_tokens SET used_at=$3 WHERE user_id=$1 AND kind=$2 AND used_at IS NULL`,
+		userID, string(kind), now)
+	return err
+}
+
 // ---- products ----
 
 const productCols = `id, user_id, name, brand, model, category, seller, purchase_date, purchase_price::float8,

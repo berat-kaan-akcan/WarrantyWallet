@@ -19,6 +19,7 @@ import (
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/config"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/extract"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/httpapi"
+	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/mail"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/notify"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/storage"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/store"
@@ -88,6 +89,9 @@ func run(logger *slog.Logger) error {
 	srv := &httpapi.Server{
 		Store: st, Files: files, Extractor: extractor,
 		Tokens:      auth.Tokens{Secret: []byte(cfg.JWTSecret), TTL: cfg.TokenTTL},
+		RefreshTTL:  cfg.RefreshTTL,
+		Mailer:      mail.LogSender{Logger: logger},
+		TrustProxy:  cfg.TrustProxy,
 		Hasher:      auth.Hasher{},
 		Logger:      logger,
 		MaxUpload:   cfg.MaxUploadMB << 20,

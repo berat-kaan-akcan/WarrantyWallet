@@ -47,6 +47,60 @@ func Run(t *testing.T, newStore func(t *testing.T) store.Store) {
 		}
 	})
 
+	t.Run("profile_password_and_tokens", func(t *testing.T) {
+		s := newStore(t)
+		a := mkUser(t, s, "tok@x.io")
+		if err := s.UpdateUserProfile(ctx, a, "Yeni Ad"); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.SetUserPassword(ctx, a, "newhash"); err != nil {
+			t.Fatal(err)
+		}
+		u, _ := s.GetUserByID(ctx, a)
+		if u.Name != "Yeni Ad" || u.PasswordHash != "newhash" {
+			t.Fatalf("user %+v", u)
+		}
+		if err := s.SetUserPassword(ctx, domain.NewID(), "x"); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatalf("want not found, got %v", err)
+		}
+		now := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
+		tok := &domain.AuthToken{UserID: a, Kind: domain.TokenRefresh, TokenHash: "h1", ExpiresAt: now.Add(time.Hour)}
+		if err := s.CreateAuthToken(ctx, tok); err != nil || tok.ID == "" {
+			t.Fatalf("create token: %v", err)
+		}
+		if err := s.CreateAuthToken(ctx, &domain.AuthToken{UserID: a, Kind: domain.TokenRefresh, TokenHash: "h1", ExpiresAt: now}); !errors.Is(err, domain.ErrConflict) {
+			t.Fatalf("duplicate hash: %v", err)
+		}
+		if _, err := s.ConsumeAuthToken(ctx, domain.TokenPasswordReset, "h1", now); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatalf("wrong kind must not consume: %v", err)
+		}
+		got, err := s.ConsumeAuthToken(ctx, domain.TokenRefresh, "h1", now)
+		if err != nil || got.UserID != a || got.UsedAt == nil {
+			t.Fatalf("consume: %v %+v", err, got)
+		}
+		if _, err := s.ConsumeAuthToken(ctx, domain.TokenRefresh, "h1", now); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatalf("second use must fail: %v", err)
+		}
+		_ = s.CreateAuthToken(ctx, &domain.AuthToken{UserID: a, Kind: domain.TokenRefresh, TokenHash: "h2", ExpiresAt: now.Add(time.Minute)})
+		if _, err := s.ConsumeAuthToken(ctx, domain.TokenRefresh, "h2", now.Add(2*time.Minute)); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatalf("expired must fail: %v", err)
+		}
+		_ = s.CreateAuthToken(ctx, &domain.AuthToken{UserID: a, Kind: domain.TokenRefresh, TokenHash: "h3", ExpiresAt: now.Add(time.Hour)})
+		_ = s.CreateAuthToken(ctx, &domain.AuthToken{UserID: a, Kind: domain.TokenPasswordReset, TokenHash: "h4", ExpiresAt: now.Add(time.Hour)})
+		if err := s.RevokeAuthTokens(ctx, a, domain.TokenRefresh, now); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := s.ConsumeAuthToken(ctx, domain.TokenRefresh, "h3", now); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatalf("revoked must fail: %v", err)
+		}
+		if _, err := s.ConsumeAuthToken(ctx, domain.TokenPasswordReset, "h4", now); err != nil {
+			t.Fatalf("other kind must survive revoke: %v", err)
+		}
+		if err := s.CreateAuthToken(ctx, &domain.AuthToken{UserID: domain.NewID(), Kind: domain.TokenRefresh, TokenHash: "h5", ExpiresAt: now}); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatalf("unknown user: %v", err)
+		}
+	})
+
 	t.Run("products_scoped_and_cascade", func(t *testing.T) {
 		s := newStore(t)
 		a := mkUser(t, s, "a@x.io")

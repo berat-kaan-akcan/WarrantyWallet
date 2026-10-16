@@ -57,8 +57,11 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, v any) bool {
 	return true
 }
 
-func clientIP(r *http.Request) string {
-	if xf := r.Header.Get("X-Forwarded-For"); xf != "" {
+// clientIP returns the caller's address. X-Forwarded-For is client-controlled, so it is only
+// honoured when the API runs behind a trusted reverse proxy (TRUST_PROXY=true); otherwise a
+// client could rotate the header to bypass rate limits.
+func clientIP(r *http.Request, trustProxy bool) string {
+	if xf := r.Header.Get("X-Forwarded-For"); trustProxy && xf != "" {
 		return strings.TrimSpace(strings.Split(xf, ",")[0])
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -70,10 +73,11 @@ func clientIP(r *http.Request) string {
 
 // rateLimiter is a fixed-window per-IP limiter (good enough for a single instance).
 type rateLimiter struct {
-	mu     sync.Mutex
-	limit  int
-	window time.Duration
-	hits   map[string]*windowCount
+	mu         sync.Mutex
+	limit      int
+	window     time.Duration
+	trustProxy bool
+	hits       map[string]*windowCount
 }
 
 type windowCount struct {
@@ -106,7 +110,7 @@ func (l *rateLimiter) allow(key string, now time.Time) bool {
 
 func (l *rateLimiter) wrap(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !l.allow(clientIP(r), time.Now()) {
+		if !l.allow(clientIP(r, l.trustProxy), time.Now()) {
 			w.Header().Set("Retry-After", "60")
 			writeError(w, http.StatusTooManyRequests, "rate_limited", "too many requests, try again later", nil)
 			return

@@ -250,3 +250,24 @@ func NewID() string {
 	b[8] = (b[8] & 0x3f) | 0x80
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
 }
+
+// AuthTokenKind distinguishes opaque server-side tokens.
+type AuthTokenKind string
+
+// Auth token kinds.
+const (
+	TokenRefresh       AuthTokenKind = "refresh"
+	TokenPasswordReset AuthTokenKind = "password_reset"
+)
+
+// AuthToken is an opaque token (refresh or password reset). Only its SHA-256 hash is stored;
+// the plaintext is shown to the client once.
+type AuthToken struct {
+	ID        string
+	UserID    string
+	Kind      AuthTokenKind
+	TokenHash string
+	ExpiresAt time.Time
+	UsedAt    *time.Time
+	CreatedAt time.Time
+}

@@ -12,7 +12,7 @@ func TestDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.HTTPAddr != ":8080" || c.GeminiModel == "" || c.MaxUploadMB != 10 || c.TokenTTL != 7*24*time.Hour || c.JWTSecret == "" {
+	if c.HTTPAddr != ":8080" || c.GeminiModel == "" || c.MaxUploadMB != 10 || c.TokenTTL != time.Hour || c.RefreshTTL != 30*24*time.Hour || c.TrustProxy || c.JWTSecret == "" {
 		t.Fatalf("%+v", c)
 	}
 	if c.GeminiAPIKey != "" {
