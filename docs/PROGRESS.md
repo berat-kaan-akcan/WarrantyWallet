@@ -2,19 +2,36 @@
 
 Son güncelleme: 2026-10-16
 
+## Durum özeti
+- **Backend (Go):** V1 uç noktalarının tamamı yazıldı; `go vet` temiz, `go test ./...` yeşil (birim + handler/entegrasyon testleri).
+- **PostgreSQL:** migration ve tüm SQL sorguları yerel PostgreSQL 16'da `PREPARE` ile doğrulandı; pgx sürücüsüyle store sözleşme testleri CI'da çalışır.
+- **Mobil (Flutter):** V1 ekranları ve testleri yazıldı. Bu oturumda Flutter SDK indirilemediği için (ağ politikası) `flutter analyze/test` yerelde çalıştırılamadı; doğrulama CI'da yapılır.
+- **Gemini:** entegrasyon + mock testleri hazır. Bu oturumda `generativelanguage.googleapis.com` ağ politikası tarafından engellendiği için canlı çağrı başarısız oldu; yedek ayrıştırıcıya otomatik geçiş canlı doğrulandı.
+
 ## Tamamlananlar
 - [x] Repo iskeleti, README, ARCHITECTURE, .gitignore, .env.example
+- [x] Domain modeli, garanti bitiş tarihi hesabı (ay sonu/artık yıl), durum hesabı
+- [x] Auth: kayıt/giriş, PBKDF2-SHA256 parola, HS256 JWT, hız sınırlama, hesap silme
+- [x] Ürün CRUD + filtre/arama + "yakında bitiyor" listesi, sunucu tarafı bitiş hesabı
+- [x] Belge yükleme/indirme/silme (içerik türü koklama, 10 MB sınırı, yerel depolama)
+- [x] ReceiptExtractor: Gemini (structured output, retry, timeout, model yedeği) + Türkçe kural tabanlı ayrıştırıcı + Fallback
+- [x] Bildirim planlama 90/30/7 gün (sunucu tablosu + işçi) ve cihazda yerel bildirim
+- [x] Servis kaydı, arıza akışı, kontrol listesi, servis paketi PDF (bağımlılıksız PDF üretici)
+- [x] Dashboard, Admin uç noktaları (kullanıcılar, kategoriler, çıkarım hata kayıtları, istatistik)
+- [x] Docker (çok aşamalı), docker-compose (API + PostgreSQL), GitHub Actions CI
+- [x] Flutter: giriş, ana ekran, ürün listesi, ürün ekleme (kamera → OCR → AI → form), detay, belge görüntüleme, arıza akışı + PDF, servis geçmişi, özet, ayarlar
+- [x] Mobil birim + widget testleri (FakeRepository)
 
-## Devam eden / sıradaki
-- [ ] Backend iskeleti (Go, config, healthz, migration'lar)
-- [ ] Auth, ürün CRUD, garanti hesabı
-- [ ] Belge yükleme, Gemini çıkarım + kural tabanlı yedek
-- [ ] Servis kaydı, PDF paketi, dashboard, bildirim planlama
-- [ ] Flutter uygulaması
-- [ ] Docker Compose, CI
+## Kalanlar / sonraki adımlar
+- [ ] CI'da mobil analiz/test sonuçlarını kontrol edip olası hataları düzeltmek
+- [ ] V2: barkod/QR ve seri numarası tarama, AI arıza asistanı, servis merkezi bulma, aile hesabı, bulut yedekleme
+- [ ] Refresh token, e-posta doğrulama, şifre sıfırlama
+- [ ] S3/MinIO depolama uygulaması, FCM push
 
 ## Alınan kararlar
 - Monorepo: backend (Go), mobile (Flutter), docs.
-- Go standart net/http (framework yok), pgx, gömülü SQL migration.
+- Go: yalnızca standart kütüphane (net/http, crypto/pbkdf2, elle HS256 JWT). PostgreSQL sürücüsü `-tags pgx` ile bağlanır.
 - V1'de Redis yok; bildirimler cihazda yerel + sunucuda tablo/işçi.
-- Gemini çağrısı yalnızca backend'de; anahtar yoksa kural tabanlı ayrıştırıcı.
+- Gemini çağrısı yalnızca backend'de; anahtar yoksa/kota dolarsa kural tabanlı ayrıştırıcı.
+- Varsayılan model `gemini-3.8-flash` (ücretsiz katmanda, görsel + structured output destekli); 404 alınırsa `gemini-3.5-flash-lite`, `gemini-2.5-flash` denenir.
+- `android/`/`ios/` klasörleri repoda değil; ekip `flutter create .` ile üretir (bkz. mobile/README.md).

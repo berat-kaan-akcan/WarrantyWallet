@@ -1,0 +1,191 @@
+import 'dart:typed_data';
+
+import '../core/api_client.dart';
+import '../core/formatters.dart';
+import '../models/models.dart';
+
+/// Result of login/register.
+class AuthSession {
+  const AuthSession(this.token, this.user);
+
+  final String token;
+  final AppUser user;
+}
+
+/// Service checklist response.
+class ChecklistResult {
+  const ChecklistResult(this.underWarranty, this.items, this.daysLeft);
+
+  final bool underWarranty;
+  final List<ChecklistItem> items;
+  final int? daysLeft;
+}
+
+/// All backend operations used by the UI. Widget tests substitute a fake implementation.
+abstract class WarrantyRepository {
+  Future<AuthSession> login(String email, String password);
+  Future<AuthSession> register(String email, String password, String name);
+  Future<AppUser> me();
+  Future<void> deleteAccount();
+
+  Future<List<ProductCategory>> categories();
+  Future<List<Product>> products({String category = '', String status = '', String query = ''});
+  Future<List<Product>> expiring({int days = 90});
+  Future<Product> product(String id);
+  Future<Product> createProduct(ProductDraft draft);
+  Future<Product> updateProduct(String id, ProductDraft draft);
+  Future<void> deleteProduct(String id);
+
+  Future<ExtractionResult> extract({Uint8List? image, String imageName = 'fis.jpg', String text = ''});
+
+  Future<List<ProductDocument>> documents(String productId, {String type = ''});
+  Future<ProductDocument> uploadDocument(String productId, String type, Uint8List bytes, String filename,
+      {String serviceRecordId = ''});
+  Future<Uint8List> documentBytes(String documentId);
+  Future<void> deleteDocument(String documentId);
+  String documentUrl(String documentId);
+  Future<Map<String, String>> authHeaders();
+
+  Future<ServiceRecord> createServiceRecord(String productId, ProblemType problem, String description);
+  Future<List<ServiceRecord>> serviceRecords({String productId = ''});
+  Future<ServiceRecord> updateServiceRecord(String id,
+      {ServiceStatus? status, String? serviceName, DateTime? serviceDate, String? notes});
+  Future<ChecklistResult> checklist(String productId);
+  Future<Uint8List> servicePack(String productId, {String serviceRecordId = ''});
+
+  Future<Dashboard> dashboard();
+}
+
+List<Map<String, dynamic>> _items(Map<String, dynamic> body) =>
+    (body['items'] as List? ?? const []).whereType<Map<String, dynamic>>().toList();
+
+/// REST implementation.
+class ApiWarrantyRepository implements WarrantyRepository {
+  ApiWarrantyRepository(this.api);
+
+  final ApiClient api;
+
+  AuthSession _session(Map<String, dynamic> j) =>
+      AuthSession(j['token'] as String, AppUser.fromJson(j['user'] as Map<String, dynamic>));
+
+  @override
+  Future<AuthSession> login(String email, String password) async =>
+      _session(await api.post('/auth/login', {'email': email.trim(), 'password': password}));
+
+  @override
+  Future<AuthSession> register(String email, String password, String name) async => _session(
+        await api.post('/auth/register', {'email': email.trim(), 'password': password, 'name': name.trim()}),
+      );
+
+  @override
+  Future<AppUser> me() async => AppUser.fromJson(await api.get('/me'));
+
+  @override
+  Future<void> deleteAccount() => api.delete('/me');
+
+  @override
+  Future<List<ProductCategory>> categories() async =>
+      _items(await api.get('/categories')).map(ProductCategory.fromJson).toList();
+
+  @override
+  Future<List<Product>> products({String category = '', String status = '', String query = ''}) async =>
+      _items(await api.get('/products', query: {'category': category, 'status': status, 'q': query}))
+          .map(Product.fromJson)
+          .toList();
+
+  @override
+  Future<List<Product>> expiring({int days = 90}) async =>
+      _items(await api.get('/products/expiring', query: {'days': '$days'})).map(Product.fromJson).toList();
+
+  @override
+  Future<Product> product(String id) async => Product.fromJson(await api.get('/products/$id'));
+
+  @override
+  Future<Product> createProduct(ProductDraft draft) async =>
+      Product.fromJson(await api.post('/products', draft.toJson()));
+
+  @override
+  Future<Product> updateProduct(String id, ProductDraft draft) async =>
+      Product.fromJson(await api.put('/products/$id', draft.toJson()));
+
+  @override
+  Future<void> deleteProduct(String id) => api.delete('/products/$id');
+
+  @override
+  Future<ExtractionResult> extract({Uint8List? image, String imageName = 'fis.jpg', String text = ''}) async {
+    if (image == null) {
+      return ExtractionResult.fromJson(await api.post('/extract', {'text': text}));
+    }
+    return ExtractionResult.fromJson(
+      await api.multipart('/extract', fields: {'text': text}, files: {'image': (image, imageName)}),
+    );
+  }
+
+  @override
+  Future<List<ProductDocument>> documents(String productId, {String type = ''}) async =>
+      _items(await api.get('/products/$productId/documents', query: {'type': type}))
+          .map(ProductDocument.fromJson)
+          .toList();
+
+  @override
+  Future<ProductDocument> uploadDocument(String productId, String type, Uint8List bytes, String filename,
+          {String serviceRecordId = ''}) async =>
+      ProductDocument.fromJson(
+        await api.multipart(
+          '/products/$productId/documents',
+          fields: {'type': type, if (serviceRecordId.isNotEmpty) 'service_record_id': serviceRecordId},
+          files: {'file': (bytes, filename)},
+        ),
+      );
+
+  @override
+  Future<Uint8List> documentBytes(String documentId) => api.bytes('/documents/$documentId/file');
+
+  @override
+  Future<void> deleteDocument(String documentId) => api.delete('/documents/$documentId');
+
+  @override
+  String documentUrl(String documentId) => api.uri('/documents/$documentId/file').toString();
+
+  @override
+  Future<Map<String, String>> authHeaders() => api.authHeaders();
+
+  @override
+  Future<ServiceRecord> createServiceRecord(String productId, ProblemType problem, String description) async =>
+      ServiceRecord.fromJson(
+        await api.post('/products/$productId/service-records', {'problem': problem.api, 'description': description}),
+      );
+
+  @override
+  Future<List<ServiceRecord>> serviceRecords({String productId = ''}) async {
+    final path = productId.isEmpty ? '/service-records' : '/products/$productId/service-records';
+    return _items(await api.get(path)).map(ServiceRecord.fromJson).toList();
+  }
+
+  @override
+  Future<ServiceRecord> updateServiceRecord(String id,
+          {ServiceStatus? status, String? serviceName, DateTime? serviceDate, String? notes}) async =>
+      ServiceRecord.fromJson(await api.patch('/service-records/$id', {
+        if (status != null) 'status': status.api,
+        if (serviceName != null) 'service_name': serviceName,
+        if (serviceDate != null) 'service_date': isoDate(serviceDate),
+        if (notes != null) 'notes': notes,
+      }));
+
+  @override
+  Future<ChecklistResult> checklist(String productId) async {
+    final j = await api.get('/products/$productId/checklist');
+    return ChecklistResult(
+      j['under_warranty'] == true,
+      _items(j).map(ChecklistItem.fromJson).toList(),
+      j['days_left'] is num ? (j['days_left'] as num).toInt() : null,
+    );
+  }
+
+  @override
+  Future<Uint8List> servicePack(String productId, {String serviceRecordId = ''}) =>
+      api.bytes('/products/$productId/service-pack.pdf', query: {'service_record_id': serviceRecordId});
+
+  @override
+  Future<Dashboard> dashboard() async => Dashboard.fromJson(await api.get('/dashboard'));
+}

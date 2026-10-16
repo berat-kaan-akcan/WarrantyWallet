@@ -1,0 +1,195 @@
+import 'package:flutter/material.dart';
+
+import '../core/api_client.dart';
+import '../core/formatters.dart';
+import '../core/warranty.dart';
+
+/// Brand colours.
+const brandColor = Color(0xFF1B5E9E);
+
+/// Colour + label + icon for a warranty status (never colour alone, for accessibility).
+({Color color, String label, IconData icon}) statusStyle(WarrantyStatus s) {
+  switch (s) {
+    case WarrantyStatus.active:
+      return (color: const Color(0xFF2E7D32), label: 'Aktif', icon: Icons.verified_user);
+    case WarrantyStatus.expiringSoon:
+      return (color: const Color(0xFFB26A00), label: 'Yakında bitiyor', icon: Icons.schedule);
+    case WarrantyStatus.expired:
+      return (color: const Color(0xFFC62828), label: 'Bitti', icon: Icons.gpp_bad);
+    case WarrantyStatus.unknown:
+      return (color: Colors.grey, label: 'Bilinmiyor', icon: Icons.help_outline);
+  }
+}
+
+/// Pill showing the warranty status.
+class StatusChip extends StatelessWidget {
+  const StatusChip(this.status, {super.key});
+
+  final WarrantyStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final st = statusStyle(status);
+    return Semantics(
+      label: 'Garanti durumu: ${st.label}',
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: st.color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(st.icon, size: 16, color: st.color),
+            const SizedBox(width: 4),
+            Text(st.label, style: TextStyle(color: st.color, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Days-left badge used in lists.
+class DaysLeftText extends StatelessWidget {
+  const DaysLeftText(this.days, this.status, {super.key});
+
+  final int? days;
+  final WarrantyStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    if (days == null) return const Text('-');
+    return Text(
+      formatDaysLeft(days!),
+      style: TextStyle(color: statusStyle(status).color, fontWeight: FontWeight.w600),
+    );
+  }
+}
+
+/// Category icon.
+IconData categoryIcon(String slug) {
+  switch (slug) {
+    case 'phone':
+      return Icons.smartphone;
+    case 'laptop':
+      return Icons.laptop_mac;
+    case 'monitor':
+      return Icons.desktop_windows;
+    case 'tv':
+      return Icons.tv;
+    case 'headphones':
+      return Icons.headphones;
+    case 'tablet':
+      return Icons.tablet_mac;
+    case 'appliance':
+      return Icons.kitchen;
+    case 'small_appliance':
+      return Icons.coffee;
+    case 'camera':
+      return Icons.photo_camera;
+    case 'console':
+      return Icons.sports_esports;
+    case 'wearable':
+      return Icons.watch;
+    default:
+      return Icons.inventory_2;
+  }
+}
+
+/// Empty state with an optional action.
+class EmptyState extends StatelessWidget {
+  const EmptyState({super.key, required this.icon, required this.title, this.message, this.action});
+
+  final IconData icon;
+  final String title;
+  final String? message;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 56, color: theme.colorScheme.outline),
+            const SizedBox(height: 12),
+            Text(title, style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
+            if (message != null) ...[
+              const SizedBox(height: 6),
+              Text(message!, style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+            ],
+            if (action != null) ...[const SizedBox(height: 16), action!],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Error state with retry.
+class ErrorState extends StatelessWidget {
+  const ErrorState({super.key, required this.error, required this.onRetry});
+
+  final Object error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final msg = error is ApiException ? (error as ApiException).userMessage : 'Beklenmeyen bir hata oluştu.';
+    return EmptyState(
+      icon: Icons.cloud_off,
+      title: 'Bir sorun oluştu',
+      message: msg,
+      action: OutlinedButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Tekrar dene')),
+    );
+  }
+}
+
+/// Shows a snackbar message.
+void showSnack(BuildContext context, String message, {bool error = false}) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      backgroundColor: error ? Theme.of(context).colorScheme.error : null,
+    ),
+  );
+}
+
+/// User-facing message for any error.
+String errorMessage(Object e) => e is ApiException ? e.userMessage : 'Beklenmeyen bir hata oluştu.';
+
+/// Labelled value row on the detail screen.
+class InfoRow extends StatelessWidget {
+  const InfoRow(this.label, this.value, {super.key, this.icon});
+
+  final String label;
+  final String value;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return MergeSemantics(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (icon != null) ...[Icon(icon, size: 20, color: theme.colorScheme.primary), const SizedBox(width: 12)],
+            Expanded(flex: 2, child: Text(label, style: theme.textTheme.bodyMedium)),
+            Expanded(
+              flex: 3,
+              child: Text(value, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -1,0 +1,17 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    # Style-only const lints are relaxed so that `flutter analyze` (which fails on infos)
+    # flags real problems. Re-enable once the team runs `dart fix --apply` locally.
+    prefer_const_constructors: ignore
+    prefer_const_literals_to_create_immutables: ignore
+    prefer_const_declarations: ignore
+    prefer_const_constructors_in_immutables: ignore
+
+linter:
+  rules:
+    - always_declare_return_types
+    - avoid_print
+    - prefer_final_locals
+    - unawaited_futures

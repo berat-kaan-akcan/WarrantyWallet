@@ -1,0 +1,168 @@
+import 'dart:typed_data';
+
+import 'package:warranty_wallet/core/api_client.dart';
+import 'package:warranty_wallet/core/warranty.dart';
+import 'package:warranty_wallet/data/repository.dart';
+import 'package:warranty_wallet/models/models.dart';
+
+const testUser = AppUser(id: 'u1', email: 'berat@test.io', name: 'Berat Kaan', role: 'user');
+
+Product monitorProduct({int daysLeft = 697}) => Product(
+      id: 'p1',
+      name: 'ASUS TUF VG27AQ',
+      brand: 'ASUS',
+      model: 'VG27AQ',
+      category: 'monitor',
+      seller: 'MediaMarkt',
+      purchaseDate: DateTime.utc(2026, 9, 12),
+      price: 12499,
+      warrantyMonths: 24,
+      warrantyEnd: DateTime.utc(2028, 9, 12),
+      serialNumber: 'M1LMQS123',
+      status: daysLeft <= 30 ? WarrantyStatus.expiringSoon : WarrantyStatus.active,
+      daysLeft: daysLeft,
+    );
+
+final headphones = Product(
+  id: 'p2',
+  name: 'Sony WH-1000XM5',
+  brand: 'Sony',
+  category: 'headphones',
+  purchaseDate: DateTime.utc(2024, 11, 1),
+  price: 8999.9,
+  warrantyEnd: DateTime.utc(2026, 11, 1),
+  status: WarrantyStatus.expiringSoon,
+  daysLeft: 16,
+);
+
+/// In-memory fake used by widget tests.
+class FakeRepository implements WarrantyRepository {
+  FakeRepository({List<Product>? products, this.extraction}) : items = products ?? [monitorProduct(), headphones];
+
+  List<Product> items;
+  ExtractionResult? extraction;
+  final created = <ProductDraft>[];
+  final uploads = <String>[];
+  String? loginError;
+
+  @override
+  Future<AuthSession> login(String email, String password) async {
+    if (loginError != null) throw ApiException(401, loginError!, 'bad');
+    return const AuthSession('tok', testUser);
+  }
+
+  @override
+  Future<AuthSession> register(String email, String password, String name) async =>
+      const AuthSession('tok', testUser);
+
+  @override
+  Future<AppUser> me() async => testUser;
+
+  @override
+  Future<void> deleteAccount() async {}
+
+  @override
+  Future<List<ProductCategory>> categories() async => defaultCategories;
+
+  @override
+  Future<List<Product>> products({String category = '', String status = '', String query = ''}) async => items
+      .where((p) => category.isEmpty || p.category == category)
+      .where((p) => query.isEmpty || p.name.toLowerCase().contains(query.toLowerCase()))
+      .toList();
+
+  @override
+  Future<List<Product>> expiring({int days = 90}) async =>
+      items.where((p) => p.daysLeft != null && p.daysLeft! >= 0 && p.daysLeft! <= days).toList();
+
+  @override
+  Future<Product> product(String id) async => items.firstWhere((p) => p.id == id);
+
+  @override
+  Future<Product> createProduct(ProductDraft draft) async {
+    created.add(draft);
+    final p = Product(
+      id: 'new${created.length}',
+      name: draft.name,
+      category: draft.category,
+      purchaseDate: draft.purchaseDate,
+      warrantyMonths: draft.warrantyMonths,
+      warrantyEnd: draft.warrantyEndPreview,
+      status: WarrantyStatus.active,
+      daysLeft: 700,
+    );
+    items = [...items, p];
+    return p;
+  }
+
+  @override
+  Future<Product> updateProduct(String id, ProductDraft draft) async => product(id);
+
+  @override
+  Future<void> deleteProduct(String id) async => items = items.where((p) => p.id != id).toList();
+
+  @override
+  Future<ExtractionResult> extract({Uint8List? image, String imageName = 'fis.jpg', String text = ''}) async =>
+      extraction ?? ExtractionResult.fromJson(const {'fields': <String, dynamic>{}, 'provider': 'none', 'missing': <String>[]});
+
+  @override
+  Future<List<ProductDocument>> documents(String productId, {String type = ''}) async => const [];
+
+  @override
+  Future<ProductDocument> uploadDocument(String productId, String type, Uint8List bytes, String filename,
+      {String serviceRecordId = ''}) async {
+    uploads.add('$productId/$type/$filename');
+    return ProductDocument(id: 'd1', type: type, contentType: 'image/jpeg', originalName: filename);
+  }
+
+  @override
+  Future<Uint8List> documentBytes(String documentId) async => Uint8List(0);
+
+  @override
+  Future<void> deleteDocument(String documentId) async {}
+
+  @override
+  String documentUrl(String documentId) => 'http://test/$documentId';
+
+  @override
+  Future<Map<String, String>> authHeaders() async => const {};
+
+  @override
+  Future<ServiceRecord> createServiceRecord(String productId, ProblemType problem, String description) async =>
+      ServiceRecord(
+        id: 's1',
+        productId: productId,
+        problem: problem,
+        status: ServiceStatus.open,
+        underWarranty: true,
+        checklist: const [
+          ChecklistItem('invoice', 'Fatura / fiş', true),
+          ChecklistItem('warranty', 'Garanti belgesi', false),
+        ],
+      );
+
+  @override
+  Future<List<ServiceRecord>> serviceRecords({String productId = ''}) async => const [];
+
+  @override
+  Future<ServiceRecord> updateServiceRecord(String id,
+          {ServiceStatus? status, String? serviceName, DateTime? serviceDate, String? notes}) async =>
+      ServiceRecord(id: id, productId: 'p1', problem: ProblemType.other, status: status ?? ServiceStatus.open);
+
+  @override
+  Future<ChecklistResult> checklist(String productId) async => const ChecklistResult(true, [], 10);
+
+  @override
+  Future<Uint8List> servicePack(String productId, {String serviceRecordId = ''}) async => Uint8List(4);
+
+  @override
+  Future<Dashboard> dashboard() async => Dashboard(
+        greeting: 'Günaydın, Berat',
+        totalProducts: items.length,
+        activeWarranties: items.where((p) => p.isCovered).length,
+        expiringSoon: 1,
+        expired: 0,
+        totalSpent: const {'TRY': 21498.9},
+        byCategory: const [CategoryStat('monitor', 'Monitör', 1, 12499), CategoryStat('headphones', 'Kulaklık', 1, 8999.9)],
+        upcoming: [headphones],
+      );
+}
