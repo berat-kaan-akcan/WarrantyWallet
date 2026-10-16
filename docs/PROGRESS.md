@@ -26,6 +26,10 @@ Son güncelleme: 2026-10-16
 1. **Mobil doğrulama** — Flutter 3.47.7 kuruldu; `pub get` OK. Tek analiz uyarısı (kullanılmayan import) giderildi, `dart format` + `dart fix` uygulandı (yalnızca biçim ve `if` blokları). `flutter test`: 19 test, hepsi geçti.
    `flutter create --platforms=android,ios .` ile platform klasörleri üretildi; AndroidManifest'e INTERNET, CAMERA, POST_NOTIFICATIONS, RECEIVE_BOOT_COMPLETED, SCHEDULE_EXACT_ALARM ve `usesCleartextTraffic`, Info.plist'e kamera/fotoğraf açıklamaları eklendi; `flutter_local_notifications` için core library desugaring açıldı.
    `pubspec.lock` artık commit ediliyor (uygulama paketi için önerilen pratik). CI: Flutter sürümü sabitlendi, `dart format` artık zorunlu, `flutter build apk --debug` işi eklendi.
+2. **Backend doğrulama** — `gofmt -l` boş, `go vet` temiz, `go test ./...` yeşil (`-race` ile de). pgx **v5.8.0** eklendi (`go.mod`/`go.sum` commit edildi). Karar: v5.9+ Go 1.25 istediği için Go 1.24 ile uyumlu son sürüm v5.8.0 seçildi.
+   Yerel PostgreSQL 16.15 üzerinde `TEST_DATABASE_URL=... go test -tags pgx ./internal/store/postgres/` → tüm sözleşme testleri geçti (hata çıkmadı).
+   Dockerfile artık `go.mod/go.sum` ile katmanlı `go mod download` yapıyor (derleme sırasında `go get` yok). CI: `go-version-file`, `go mod tidy` farkı kontrolü, `-tags pgx` ile build + vet.
+   Not: bu ortamda Docker Hub 429 verdi ve konteyner içinden `apk` erişemedi; build aşaması (Go derleme) yerelde doğrulandı, tam imaj CI'daki `docker` işinde derlenir.
 
 ## Kalanlar / sonraki adımlar
 - [ ] CI'da mobil analiz/test sonuçlarını kontrol edip olası hataları düzeltmek

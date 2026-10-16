@@ -19,7 +19,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
       - name: gofmt
         run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
       - name: go vet
@@ -51,11 +52,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
-      - name: Add pgx driver
-        run: go get github.com/jackc/pgx/v5@v5.7.2 && go mod tidy
-      - name: Build with driver
-        run: go build -tags pgx ./...
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: go.mod / go.sum are tidy
+        run: go mod tidy && git diff --exit-code go.mod go.sum
+      - name: Build and vet with driver
+        run: go build -tags pgx ./... && go vet -tags pgx ./...
       - name: Store contract tests against PostgreSQL
         run: go test -tags pgx -count=1 -v ./internal/store/postgres/
 

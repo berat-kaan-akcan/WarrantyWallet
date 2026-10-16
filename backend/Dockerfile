@@ -1,9 +1,11 @@
 # syntax=docker/dockerfile:1
 FROM golang:1.24-alpine AS build
 WORKDIR /src
+# Download modules in their own layer so code changes do not re-fetch them.
+COPY go.mod go.sum ./
+RUN go mod download
 COPY . .
-# The core module has no third-party deps; the PostgreSQL driver is linked via the `pgx` build tag.
-RUN go get github.com/jackc/pgx/v5@v5.7.2 && go mod tidy
+# The PostgreSQL driver is linked via the `pgx` build tag (cmd/api/driver_pgx.go).
 ARG VERSION=dev
 RUN CGO_ENABLED=0 go build -tags pgx -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /out/api ./cmd/api
 
