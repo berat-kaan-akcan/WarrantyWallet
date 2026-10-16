@@ -1,0 +1,33 @@
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Go
+backend/bin/
+backend/tmp/
+backend/coverage.out
+backend/uploads/
+*.test
+
+# Flutter / Dart
+mobile/.dart_tool/
+mobile/build/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/coverage/
+mobile/**/GeneratedPluginRegistrant.*
+mobile/android/local.properties
+mobile/android/.gradle/
+mobile/ios/Pods/
+mobile/ios/Flutter/Generated.xcconfig
+mobile/ios/Flutter/flutter_export_environment.sh
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
