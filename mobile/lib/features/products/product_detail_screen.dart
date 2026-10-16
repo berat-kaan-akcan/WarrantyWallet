@@ -24,9 +24,7 @@ class ProductDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final product = ref.watch(productProvider(productId));
     return product.when(
-      loading: () => Scaffold(
-          appBar: AppBar(),
-          body: const LoadingView()),
+      loading: () => Scaffold(appBar: AppBar(), body: const LoadingView()),
       error: (e, _) => Scaffold(
         appBar: AppBar(),
         body: ErrorState(
