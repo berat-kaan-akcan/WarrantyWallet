@@ -137,7 +137,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                             ProductTile(product: items[i], categories: cats),
                       ),
               ),
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const LoadingView(),
               error: (e, _) => ErrorState(
                   error: e,
                   onRetry: () => ref.invalidate(productsProvider(_query))),

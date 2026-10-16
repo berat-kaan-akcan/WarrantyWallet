@@ -80,7 +80,7 @@ class _DocumentPageState extends ConsumerState<_DocumentPage> {
               message: errorMessage(snap.error!));
         }
         if (!snap.hasData) {
-          return const Center(child: CircularProgressIndicator());
+          return const LoadingView();
         }
         final data = snap.data!;
         if (widget.doc.isImage && widget.doc.contentType != 'image/heic') {

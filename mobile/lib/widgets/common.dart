@@ -117,7 +117,7 @@ IconData categoryIcon(String slug) {
   }
 }
 
-/// Empty state with an optional action.
+/// Empty state with an optional action. Scrolls when the text is enlarged.
 class EmptyState extends StatelessWidget {
   const EmptyState(
       {super.key,
@@ -134,32 +134,45 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Center(
-      child: Padding(
+    final content = Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 56, color: theme.colorScheme.outline),
+            ExcludeSemantics(
+                child: Icon(icon, size: 56, color: theme.colorScheme.outline)),
             const SizedBox(height: 12),
-            Text(title,
-                style: theme.textTheme.titleMedium,
-                textAlign: TextAlign.center),
-            if (message != null) ...[
-              const SizedBox(height: 6),
-              Text(message!,
-                  style: theme.textTheme.bodyMedium,
-                  textAlign: TextAlign.center),
-            ],
+            MergeSemantics(
+              child: Column(
+                children: [
+                  Semantics(
+                    header: true,
+                    child: Text(title,
+                        style: theme.textTheme.titleMedium,
+                        textAlign: TextAlign.center),
+                  ),
+                  if (message != null) ...[
+                    const SizedBox(height: 6),
+                    Text(message!,
+                        style: theme.textTheme.bodyMedium,
+                        textAlign: TextAlign.center),
+                  ],
+                ],
+              ),
+            ),
             if (action != null) ...[const SizedBox(height: 16), action!],
           ],
-        ),
-      ),
+        ));
+    // Inside another scroll view (unbounded height) the content is laid out as is.
+    return LayoutBuilder(
+      builder: (context, c) => c.maxHeight.isFinite
+          ? Center(child: SingleChildScrollView(child: content))
+          : content,
     );
   }
 }
 
-/// Error state with retry.
+/// Full-screen error state with retry; offline errors get their own wording.
 class ErrorState extends StatelessWidget {
   const ErrorState({super.key, required this.error, required this.onRetry});
 
@@ -168,19 +181,46 @@ class ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final msg = error is ApiException
-        ? (error as ApiException).userMessage
-        : 'Beklenmeyen bir hata oluştu.';
+    final offline = error is ApiException && (error as ApiException).isNetwork;
     return EmptyState(
-      icon: Icons.cloud_off,
-      title: 'Bir sorun oluştu',
-      message: msg,
+      icon: offline ? Icons.wifi_off : Icons.cloud_off,
+      title: offline ? 'Bağlantı yok' : 'Bir sorun oluştu',
+      message: errorMessage(error),
       action: OutlinedButton.icon(
+          key: const Key('retry'),
           onPressed: onRetry,
           icon: const Icon(Icons.refresh),
           label: const Text('Tekrar dene')),
     );
   }
+}
+
+/// Compact error inside a section, with a retry button.
+class InlineError extends StatelessWidget {
+  const InlineError({super.key, required this.error, required this.onRetry});
+
+  final Object error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Expanded(child: ErrorText(errorMessage(error))),
+            TextButton(onPressed: onRetry, child: const Text('Tekrar dene')),
+          ],
+        ),
+      );
+}
+
+/// Centered progress indicator announced as "Yükleniyor".
+class LoadingView extends StatelessWidget {
+  const LoadingView({super.key});
+
+  @override
+  Widget build(BuildContext context) => const Center(
+      child: CircularProgressIndicator(semanticsLabel: 'Yükleniyor'));
 }
 
 /// Shows a snackbar message.

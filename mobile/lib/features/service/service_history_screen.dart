@@ -40,7 +40,7 @@ class ServiceHistoryScreen extends ConsumerWidget {
                       ServiceRecordTile(record: items[i]),
                 ),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const LoadingView(),
         error: (e, _) => ErrorState(
             error: e, onRetry: () => ref.invalidate(serviceHistoryProvider)),
       ),

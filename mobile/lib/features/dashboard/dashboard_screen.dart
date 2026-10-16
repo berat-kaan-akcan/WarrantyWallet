@@ -23,7 +23,7 @@ class DashboardScreen extends ConsumerWidget {
           },
           child: DashboardView(d: d),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const LoadingView(),
         error: (e, _) => ErrorState(
             error: e, onRetry: () => ref.invalidate(dashboardProvider)),
       ),

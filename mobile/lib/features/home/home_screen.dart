@@ -55,7 +55,7 @@ class HomeScreen extends ConsumerWidget {
               loading: () => const SizedBox(
                   height: 96,
                   child: Center(child: CircularProgressIndicator())),
-              error: (e, _) => ErrorState(
+              error: (e, _) => InlineError(
                   error: e, onRetry: () => ref.invalidate(dashboardProvider)),
             ),
             const SizedBox(height: 24),
@@ -76,8 +76,10 @@ class HomeScreen extends ConsumerWidget {
                           'Önümüzdeki 90 gün içinde garantisi biten ürün yok. 🎉'),
                     )
                   : Column(children: [for (final p in items) _ExpiringTile(p)]),
-              loading: () => const LinearProgressIndicator(),
-              error: (e, _) => Text(errorMessage(e)),
+              loading: () =>
+                  const LinearProgressIndicator(semanticsLabel: 'Yükleniyor'),
+              error: (e, _) => InlineError(
+                  error: e, onRetry: () => ref.invalidate(expiringProvider)),
             ),
             const SizedBox(height: 24),
             Text('Kategoriler', style: theme.textTheme.titleMedium),

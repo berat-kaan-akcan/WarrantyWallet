@@ -26,7 +26,7 @@ class ProductDetailScreen extends ConsumerWidget {
     return product.when(
       loading: () => Scaffold(
           appBar: AppBar(),
-          body: const Center(child: CircularProgressIndicator())),
+          body: const LoadingView()),
       error: (e, _) => Scaffold(
         appBar: AppBar(),
         body: ErrorState(
@@ -340,8 +340,12 @@ class _ProductDetail extends ConsumerWidget {
                           ),
                       ],
                     ),
-              loading: () => const LinearProgressIndicator(),
-              error: (e, _) => Text(errorMessage(e)),
+              loading: () =>
+                  const LinearProgressIndicator(semanticsLabel: 'Yükleniyor'),
+              error: (e, _) => InlineError(
+                  error: e,
+                  onRetry: () =>
+                      ref.invalidate(productServiceRecordsProvider(p.id))),
             ),
             const SizedBox(height: 32),
           ],
