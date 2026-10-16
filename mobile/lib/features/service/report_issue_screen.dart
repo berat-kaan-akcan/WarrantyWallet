@@ -7,6 +7,7 @@ import '../../state/providers.dart';
 import '../../widgets/common.dart';
 import '../products/add_product_screen.dart';
 import '../products/document_viewer.dart';
+import 'diagnosis_screen.dart';
 
 /// "Ürünüm Arızalandı": sorun seçimi → fotoğraf → servis kaydı → belge kontrol listesi + PDF.
 class ReportIssueScreen extends ConsumerStatefulWidget {
@@ -60,6 +61,26 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Opens the AI fault assistant; continuing from there creates the record.
+  Future<void> _diagnose() async {
+    final problem = _problem;
+    if (problem == null) {
+      showSnack(context, 'Lütfen sorunu seçin', error: true);
+      return;
+    }
+    final description = _description.text.trim();
+    if (problem == ProblemType.other && description.length < 5) {
+      showSnack(context, 'Lütfen sorunu kısaca açıklayın', error: true);
+      return;
+    }
+    final proceed = await Navigator.of(context).push<bool>(MaterialPageRoute(
+        builder: (_) => DiagnosisScreen(
+            product: widget.product,
+            problem: problem,
+            description: description)));
+    if (proceed == true && mounted) await _submit();
   }
 
   Future<void> _preparePdf() async {
@@ -164,6 +185,15 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
           ],
         ),
         const SizedBox(height: 24),
+        OutlinedButton.icon(
+          key: const Key('ai_diagnose'),
+          onPressed: _busy ? null : _diagnose,
+          icon: const Icon(Icons.auto_awesome),
+          label: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text('Olası nedenleri ve çözümleri gör (AI)')),
+        ),
+        const SizedBox(height: 8),
         FilledButton.icon(
           key: const Key('create_service'),
           onPressed: _busy ? null : _submit,

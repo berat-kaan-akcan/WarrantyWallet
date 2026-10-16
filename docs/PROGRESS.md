@@ -47,10 +47,12 @@ Son güncelleme: 2026-10-16
    Karar: kamera erişimi testlerde `CodeScanner` arayüzüyle soyutlandı (widget testleri sahte tarayıcı kullanır).
 10. **V2(b) AI arıza asistanı — backend** — `POST /products/{id}/diagnose` (`internal/assist`): ürün + arıza türü + açıklamadan olası nedenler (en fazla 5, olasılıklı), güvenli ilk adımlar (en fazla 6), servis önerisi ve garanti tavsiyesi. Gemini yapılandırılmış çıktıyla çağrılır (aynı model yedek zinciri); hata, kota, geçersiz veya eksik yanıtta Türkçe kural tabanı yanıt verir. Kararlar: garanti tavsiyesi ve feragat metni modelden değil sunucudaki verilerden gelir; duman, yanık kokusu, şişmiş pil veya sıvı ifadeleri her durumda güvenlik uyarısı üretir; kullanıcı metni istemde `<user_description>` etiketleri içinde ve "veri, talimat değil" notuyla gönderilir; iç hata ayrıntısı istemciye sızmaz (`ai_unavailable`). Uç nokta `/extract` ile aynı hız sınırını paylaşır. Birim testleri sahte `Generator` kullanır.
    **Canlı deneme:** "şarjdayken kapandı, açılmıyor, ısınmıştı" açıklamasıyla ~21 sn'de 4 neden + 5 adım döndü, `recommend_service: true`. Bu sırada `gemini-3.5-flash` yanıt vermedi ve yanıtı yedek `gemini-2.5-flash` verdi; zincir beklendiği gibi çalıştı.
+11. **V2(b) AI arıza asistanı — mobil** — "Ürünüm Arızalandı" ekranına "Olası nedenleri ve çözümleri gör (AI)" düğmesi eklendi. Yeni "Arıza asistanı" ekranı güvenlik uyarısını (öne çıkarılmış, ekran okuyucu duyurur), özeti, olasılık etiketli nedenleri, numaralı adımları ve garanti tavsiyesini gösteriyor; kaynağı (Gemini modeli veya yerleşik öneriler) ve uyarı metnini belirtiyor. "Servis kaydı oluştur" mevcut kayıt akışına devam ediyor, "Sorun çözüldü" kayıt açmadan geri dönüyor. Yapay zekâ çağrısı için istemci zaman aşımı 60 sn (diğer istekler 30 sn). Ek düzeltme: art arda gösterilen uyarı mesajları artık kuyruğa girmiyor, yenisi eskisinin yerine geçiyor. Mobil testler: 48/48.
 
 ## Kalanlar / sonraki adımlar
 - [ ] CI'da mobil analiz/test sonuçlarını kontrol edip olası hataları düzeltmek
 - [x] V2: barkod/QR ve seri numarası tarama
+- [x] V2: Gemini ile AI arıza asistanı (backend + mobil)
 - [ ] V2: servis merkezi bulma, aile hesabı, bulut yedekleme
 - [x] Refresh token, şifre sıfırlama iskeleti
 - [ ] E-posta doğrulama ve gerçek SMTP gönderici

@@ -322,6 +322,78 @@ class ServiceRecord {
   final List<ChecklistItem> checklist;
 }
 
+/// One possible cause from the AI fault assistant.
+class DiagnosisCause {
+  const DiagnosisCause(this.cause, this.likelihood, this.explanation);
+
+  factory DiagnosisCause.fromJson(Map<String, dynamic> j) =>
+      DiagnosisCause(_s(j['cause']), _s(j['likelihood']), _s(j['explanation']));
+
+  final String cause;
+  final String likelihood; // high | medium | low
+  final String explanation;
+
+  String get likelihoodLabel => switch (likelihood) {
+        'high' => 'Yüksek olasılık',
+        'low' => 'Düşük olasılık',
+        _ => 'Orta olasılık',
+      };
+}
+
+/// A safe step the user can try.
+class DiagnosisStep {
+  const DiagnosisStep(this.title, this.detail);
+
+  factory DiagnosisStep.fromJson(Map<String, dynamic> j) =>
+      DiagnosisStep(_s(j['title']), _s(j['detail']));
+
+  final String title;
+  final String detail;
+}
+
+/// Result of POST /products/{id}/diagnose.
+class Diagnosis {
+  const Diagnosis({
+    required this.summary,
+    this.causes = const [],
+    this.steps = const [],
+    this.safetyWarning = '',
+    this.recommendService = false,
+    this.warrantyAdvice = '',
+    this.provider = 'rules',
+    this.model = '',
+    this.disclaimer = '',
+    this.aiUnavailable = false,
+  });
+
+  factory Diagnosis.fromJson(Map<String, dynamic> j) => Diagnosis(
+        summary: _s(j['summary']),
+        causes: _list(j['likely_causes']).map(DiagnosisCause.fromJson).toList(),
+        steps: _list(j['steps']).map(DiagnosisStep.fromJson).toList(),
+        safetyWarning: _s(j['safety_warning']),
+        recommendService: j['recommend_service'] == true,
+        warrantyAdvice: _s(j['warranty_advice']),
+        provider: _s(j['provider']),
+        model: _s(j['model']),
+        disclaimer: _s(j['disclaimer']),
+        aiUnavailable:
+            j['warnings'] is List && (j['warnings'] as List).isNotEmpty,
+      );
+
+  final String summary;
+  final List<DiagnosisCause> causes;
+  final List<DiagnosisStep> steps;
+  final String safetyWarning;
+  final bool recommendService;
+  final String warrantyAdvice;
+  final String provider;
+  final String model;
+  final String disclaimer;
+  final bool aiUnavailable;
+
+  bool get isAi => provider == 'gemini';
+}
+
 /// Result of POST /extract.
 class ExtractionResult {
   const ExtractionResult({

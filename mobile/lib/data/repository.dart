@@ -67,6 +67,8 @@ abstract class WarrantyRepository {
       DateTime? serviceDate,
       String? notes});
   Future<ChecklistResult> checklist(String productId);
+  Future<Diagnosis> diagnose(
+      String productId, ProblemType problem, String description);
   Future<Uint8List> servicePack(String productId,
       {String serviceRecordId = ''});
 
@@ -269,6 +271,13 @@ class ApiWarrantyRepository implements WarrantyRepository {
       j['days_left'] is num ? (j['days_left'] as num).toInt() : null,
     );
   }
+
+  @override
+  Future<Diagnosis> diagnose(
+          String productId, ProblemType problem, String description) async =>
+      Diagnosis.fromJson(await api.post('/products/$productId/diagnose',
+          {'problem': problem.api, 'description': description},
+          timeout: ApiClient.aiTimeout));
 
   @override
   Future<Uint8List> servicePack(String productId,

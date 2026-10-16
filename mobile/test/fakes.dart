@@ -47,6 +47,21 @@ class FakeRepository implements WarrantyRepository {
   final created = <ProductDraft>[];
   final uploads = <String>[];
   String? loginError;
+  Object? diagnoseError;
+  final diagnoseCalls = <String>[];
+  Diagnosis diagnosis = const Diagnosis(
+    summary: 'Panel kablosu gevşemiş olabilir.',
+    causes: [
+      DiagnosisCause('Panel kablosu', 'high', 'Bağlantı gevşemiş olabilir.')
+    ],
+    steps: [DiagnosisStep('Yeniden başlatın', 'Kapatıp 1 dakika sonra açın.')],
+    safetyWarning: 'Cihazı fişten çekin.',
+    recommendService: true,
+    warrantyAdvice: 'Ürününüz garanti kapsamında.',
+    provider: 'gemini',
+    model: 'gemini-test',
+    disclaimer: 'Genel bilgilendirme amaçlıdır.',
+  );
 
   @override
   Future<AuthSession> login(String email, String password) async {
@@ -226,6 +241,14 @@ class FakeRepository implements WarrantyRepository {
   @override
   Future<ChecklistResult> checklist(String productId) async =>
       const ChecklistResult(true, [], 10);
+
+  @override
+  Future<Diagnosis> diagnose(
+      String productId, ProblemType problem, String description) async {
+    diagnoseCalls.add('${problem.api}:$description');
+    if (diagnoseError != null) throw diagnoseError!;
+    return diagnosis;
+  }
 
   @override
   Future<Uint8List> servicePack(String productId,

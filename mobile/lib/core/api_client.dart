@@ -108,10 +108,17 @@ class ApiClient {
       _decode(await _send(() async =>
           _client.get(uri(path, query), headers: await _headers())));
 
-  Future<Map<String, dynamic>> post(String path, Object? body) async => _decode(
-        await _send(() async => _client.post(uri(path),
-            headers: await _headers(), body: jsonEncode(body))),
+  Future<Map<String, dynamic>> post(String path, Object? body,
+          {Duration timeout = _timeout}) async =>
+      _decode(
+        await _send(
+            () async => _client.post(uri(path),
+                headers: await _headers(), body: jsonEncode(body)),
+            timeout: timeout),
       );
+
+  /// Timeout for AI endpoints (model fallbacks can take a while).
+  static const aiTimeout = Duration(seconds: 60);
 
   Future<Map<String, dynamic>> put(String path, Object? body) async => _decode(
         await _send(() async => _client.put(uri(path),
