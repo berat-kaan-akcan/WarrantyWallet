@@ -44,13 +44,14 @@ type productInput struct {
 	Currency       string      `json:"currency"`
 	WarrantyMonths *int        `json:"warranty_months"`
 	SerialNumber   string      `json:"serial_number"`
+	Barcode        string      `json:"barcode"`
 	Notes          string      `json:"notes"`
 }
 
 func (in productInput) apply(p *domain.Product) {
 	p.Name, p.Brand, p.Model, p.Category, p.Seller = in.Name, in.Brand, in.Model, in.Category, in.Seller
 	p.PurchaseDate, p.Price, p.Currency = in.PurchaseDate, in.Price, in.Currency
-	p.SerialNumber, p.Notes = in.SerialNumber, in.Notes
+	p.SerialNumber, p.Barcode, p.Notes = in.SerialNumber, in.Barcode, in.Notes
 	if in.WarrantyMonths != nil {
 		p.WarrantyMonths = *in.WarrantyMonths
 	} else {
@@ -108,7 +109,7 @@ func (s *Server) syncReminders(ctx context.Context, p domain.Product) {
 func (s *Server) handleListProducts(w http.ResponseWriter, r *http.Request) {
 	u := userFrom(r.Context())
 	q := r.URL.Query()
-	f := store.ProductFilter{Category: q.Get("category"), Query: strings.TrimSpace(q.Get("q"))}
+	f := store.ProductFilter{Category: q.Get("category"), Query: strings.TrimSpace(q.Get("q")), Code: strings.TrimSpace(q.Get("code"))}
 	status := domain.WarrantyStatus(q.Get("status"))
 	switch status {
 	case "", domain.StatusActive, domain.StatusExpiringSoon, domain.StatusExpired, domain.StatusUnknown:
@@ -116,7 +117,7 @@ func (s *Server) handleListProducts(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnprocessableEntity, "validation_failed", "invalid filter", map[string]string{"status": "active|expiring_soon|expired|unknown"})
 		return
 	}
-	if utf8.RuneCountInString(f.Query) > 100 {
+	if utf8.RuneCountInString(f.Query) > 100 || utf8.RuneCountInString(f.Code) > 128 {
 		writeError(w, http.StatusUnprocessableEntity, "validation_failed", "invalid filter", map[string]string{"q": "max 100 characters"})
 		return
 	}

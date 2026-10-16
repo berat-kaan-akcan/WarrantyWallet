@@ -138,9 +138,11 @@ Hatalar: `400 invalid_reset_token`, `422` (`fields.password`).
 {
   "name":"ASUS TUF VG27AQ","brand":"ASUS","model":"VG27AQ","category":"monitor",
   "seller":"MediaMarkt","purchase_date":"2026-09-12","price":12499,"currency":"TRY",
-  "warranty_months":24,"serial_number":"R9LMQS123456","notes":""
+  "warranty_months":24,"serial_number":"R9LMQS123456","barcode":"4711081234567","notes":""
 }
 ```
+`barcode` (V2, isteğe bağlı, ≤128 karakter): kutudaki EAN/UPC/QR kodu.
+
 `201`:
 ```json
 {
@@ -157,7 +159,10 @@ Hatalar: `400 invalid_reset_token`, `422` (`fields.password`).
   (karakter sayılır, bayt değil).
 - Ürün yazılınca 90/30/7 gün hatırlatıcıları planlanır.
 
-### `GET /products?category=&status=&q=` (auth)
+### `GET /products?category=&status=&q=&code=` (auth)
+- `q`: ad, marka, model, satıcı, seri numarası veya barkodda geçen metin (büyük/küçük harf duyarsız).
+- `code` (V2 tarama): barkod **veya** seri numarasıyla birebir eşleşme (büyük/küçük harf duyarsız), ≤128 karakter.
+  Mobil uygulama tarayıcıdan gelen kodu buna gönderir: `GET /products?code=5023417` → `{"count":1,"items":[...]}`.
 ```json
 {"count":1,"items":[{ "id":"35ccbfd5-...", "name":"ASUS TUF VG27AQ", "status":"active", "days_left":697, "...":"..." }]}
 ```

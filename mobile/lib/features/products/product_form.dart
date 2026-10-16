@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/formatters.dart';
+import '../../core/scan_parser.dart';
 import '../../core/warranty.dart';
 import '../../models/models.dart';
 
@@ -26,6 +27,7 @@ class ProductForm extends StatefulWidget {
     this.categories = defaultCategories,
     this.highlight = const {},
     this.submitLabel = 'Kaydet',
+    this.onScan,
   });
 
   final ProductDraft initial;
@@ -33,6 +35,9 @@ class ProductForm extends StatefulWidget {
   final List<ProductCategory> categories;
   final Set<String> highlight;
   final String submitLabel;
+
+  /// Opens the barcode/QR scanner; null hides the scan buttons.
+  final Future<ScannedCode?> Function()? onScan;
 
   @override
   State<ProductForm> createState() => ProductFormState();
@@ -48,6 +53,7 @@ class ProductFormState extends State<ProductForm> {
   late final TextEditingController _seller;
   late final TextEditingController _price;
   late final TextEditingController _serial;
+  late final TextEditingController _barcode;
   late final TextEditingController _notes;
   bool _saving = false;
   String? _dateError;
@@ -69,6 +75,7 @@ class ProductFormState extends State<ProductForm> {
       currency: i.currency,
       warrantyMonths: i.warrantyMonths,
       serialNumber: i.serialNumber,
+      barcode: i.barcode,
       notes: i.notes,
     );
     _name = TextEditingController(text: i.name);
@@ -78,12 +85,22 @@ class ProductFormState extends State<ProductForm> {
     _price = TextEditingController(
         text: i.price > 0 ? formatMoney(i.price, '').trim() : '');
     _serial = TextEditingController(text: i.serialNumber);
+    _barcode = TextEditingController(text: i.barcode);
     _notes = TextEditingController(text: i.notes);
   }
 
   @override
   void dispose() {
-    for (final c in [_name, _brand, _model, _seller, _price, _serial, _notes]) {
+    for (final c in [
+      _name,
+      _brand,
+      _model,
+      _seller,
+      _price,
+      _serial,
+      _barcode,
+      _notes
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -99,6 +116,23 @@ class ProductFormState extends State<ProductForm> {
           : null,
       border: const OutlineInputBorder(),
       suffixIcon: warn ? const Icon(Icons.edit_note) : null,
+    );
+  }
+
+  Widget? _scanButton(String tooltip) {
+    final scan = widget.onScan;
+    if (scan == null) return null;
+    return IconButton(
+      tooltip: tooltip,
+      icon: const Icon(Icons.qr_code_scanner),
+      onPressed: () async {
+        final code = await scan();
+        if (code == null || !mounted) return;
+        setState(() {
+          if (code.serial.isNotEmpty) _serial.text = code.serial;
+          if (code.barcode.isNotEmpty) _barcode.text = code.barcode;
+        });
+      },
     );
   }
 
@@ -133,6 +167,7 @@ class ProductFormState extends State<ProductForm> {
       ..seller = _seller.text
       ..price = parseMoney(_price.text) ?? 0
       ..serialNumber = _serial.text
+      ..barcode = _barcode.text
       ..notes = _notes.text;
     setState(() => _saving = true);
     try {
@@ -267,8 +302,20 @@ class ProductFormState extends State<ProductForm> {
           ),
           gap,
           TextFormField(
-              controller: _serial,
-              decoration: _dec('Seri numarası', 'serial_number')),
+            key: const Key('f_serial'),
+            controller: _serial,
+            decoration: _dec('Seri numarası', 'serial_number')
+                .copyWith(suffixIcon: _scanButton('Seri numarasını tara')),
+          ),
+          gap,
+          TextFormField(
+            key: const Key('f_barcode'),
+            controller: _barcode,
+            maxLength: 128,
+            decoration: _dec('Barkod (EAN / QR)', 'barcode',
+                    helper: 'Kutudaki barkod; ürünü taratarak bulmanızı sağlar')
+                .copyWith(suffixIcon: _scanButton('Barkodu tara')),
+          ),
           gap,
           TextFormField(
             controller: _notes,

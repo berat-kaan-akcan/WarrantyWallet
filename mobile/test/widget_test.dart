@@ -5,14 +5,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:warranty_wallet/app.dart';
 import 'package:warranty_wallet/core/formatters.dart';
+import 'package:warranty_wallet/core/scan_parser.dart';
 import 'package:warranty_wallet/core/warranty.dart';
 import 'package:warranty_wallet/features/dashboard/dashboard_screen.dart';
 import 'package:warranty_wallet/features/products/add_product_screen.dart';
+import 'package:warranty_wallet/features/scan/code_scanner.dart';
 import 'package:warranty_wallet/features/service/report_issue_screen.dart';
 import 'package:warranty_wallet/services/services.dart';
 import 'package:warranty_wallet/state/providers.dart';
 
 import 'fakes.dart';
+
+class FakeCodeScanner implements CodeScanner {
+  FakeCodeScanner([this.raw]);
+
+  String? raw;
+
+  @override
+  Future<ScannedCode?> scan(BuildContext context, {String title = ''}) async =>
+      raw == null ? null : parseScannedCode(raw!);
+}
 
 class FakePicker implements ReceiptImagePicker {
   @override
@@ -20,7 +32,9 @@ class FakePicker implements ReceiptImagePicker {
 }
 
 List<Override> overrides(FakeRepository repo,
-    {String? token, FakeReminderScheduler? scheduler}) {
+    {String? token,
+    FakeReminderScheduler? scheduler,
+    FakeCodeScanner? scanner}) {
   final tokens = MemoryTokenStore()..token = token;
   return [
     repositoryProvider.overrideWithValue(repo),
@@ -29,6 +43,7 @@ List<Override> overrides(FakeRepository repo,
     reminderSchedulerProvider
         .overrideWithValue(scheduler ?? FakeReminderScheduler()),
     imageSourceProvider.overrideWithValue(FakePicker()),
+    codeScannerProvider.overrideWithValue(scanner ?? FakeCodeScanner()),
   ];
 }
 

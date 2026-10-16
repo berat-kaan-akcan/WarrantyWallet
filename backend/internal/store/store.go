@@ -13,7 +13,8 @@ import (
 // ProductFilter narrows product listings.
 type ProductFilter struct {
 	Category string
-	Query    string // matches name/brand/model/seller, case-insensitive
+	Query    string // matches name/brand/model/seller/serial/barcode, case-insensitive
+	Code     string // exact, case-insensitive match on barcode OR serial number (scanner lookup)
 	EndFrom  domain.Date
 	EndTo    domain.Date
 }

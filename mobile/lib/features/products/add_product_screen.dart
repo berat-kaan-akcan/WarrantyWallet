@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/scan_parser.dart';
+import '../scan/code_scanner.dart';
 import '../../core/api_client.dart';
 import '../../models/models.dart';
 import '../../state/providers.dart';
@@ -49,7 +51,10 @@ enum _Step { choose, reading, review }
 
 /// "Ürün Ekle": fiş fotoğrafı → OCR → AI → kontrol → Kaydet.
 class AddProductScreen extends ConsumerStatefulWidget {
-  const AddProductScreen({super.key});
+  const AddProductScreen({super.key, this.scanned});
+
+  /// Code scanned before adding (e.g. "not found" after a barcode lookup).
+  final ScannedCode? scanned;
 
   @override
   ConsumerState<AddProductScreen> createState() => _AddProductScreenState();
@@ -89,6 +94,16 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
         _step = _Step.review;
       });
     }
+  }
+
+  ProductDraft _initialDraft() {
+    final d = _result?.draft ?? ProductDraft();
+    final code = widget.scanned;
+    if (code != null) {
+      if (d.serialNumber.isEmpty) d.serialNumber = code.serial;
+      if (d.barcode.isEmpty) d.barcode = code.barcode;
+    }
+    return d;
   }
 
   void _manual() => setState(() {
@@ -157,10 +172,11 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
               _ExtractionBanner(result: _result, error: _error),
               const SizedBox(height: 12),
               ProductForm(
-                initial: _result?.draft ?? ProductDraft(),
+                initial: _initialDraft(),
                 categories: cats,
                 highlight: {...?_result?.missing},
                 onSubmit: _save,
+                onScan: () => ref.read(codeScannerProvider).scan(context),
               ),
             ],
           ),

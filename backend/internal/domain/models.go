@@ -53,6 +53,7 @@ type Product struct {
 	WarrantyMonths int       `json:"warranty_months"`
 	WarrantyEnd    Date      `json:"warranty_end"`
 	SerialNumber   string    `json:"serial_number"`
+	Barcode        string    `json:"barcode"`
 	Notes          string    `json:"notes"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
@@ -70,6 +71,7 @@ func (p *Product) Normalize() {
 	}
 	p.Seller = strings.TrimSpace(p.Seller)
 	p.SerialNumber = strings.TrimSpace(p.SerialNumber)
+	p.Barcode = strings.TrimSpace(p.Barcode)
 	p.Notes = strings.TrimSpace(p.Notes)
 	p.Currency = strings.ToUpper(strings.TrimSpace(p.Currency))
 	if p.Currency == "" {
@@ -116,6 +118,9 @@ func (p *Product) Validate(today Date) map[string]string {
 		if utf8.RuneCountInString(v) > 120 {
 			errs[k] = "max 120 characters"
 		}
+	}
+	if utf8.RuneCountInString(p.Barcode) > 128 {
+		errs["barcode"] = "max 128 characters"
 	}
 	if utf8.RuneCountInString(p.Notes) > 2000 {
 		errs["notes"] = "max 2000 characters"

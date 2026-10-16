@@ -91,6 +91,7 @@ class Product {
     this.warrantyMonths = defaultWarrantyMonths,
     this.warrantyEnd,
     this.serialNumber = '',
+    this.barcode = '',
     this.notes = '',
     this.status = WarrantyStatus.unknown,
     this.daysLeft,
@@ -109,6 +110,7 @@ class Product {
         warrantyMonths: _i(j['warranty_months']),
         warrantyEnd: _date(j['warranty_end']),
         serialNumber: _s(j['serial_number']),
+        barcode: _s(j['barcode']),
         notes: _s(j['notes']),
         status: warrantyStatusFromApi(j['status'] as String?),
         daysLeft:
@@ -127,6 +129,7 @@ class Product {
   final int warrantyMonths;
   final DateTime? warrantyEnd;
   final String serialNumber;
+  final String barcode;
   final String notes;
   final WarrantyStatus status;
   final int? daysLeft;
@@ -148,6 +151,7 @@ class ProductDraft {
     this.currency = 'TRY',
     this.warrantyMonths = defaultWarrantyMonths,
     this.serialNumber = '',
+    this.barcode = '',
     this.notes = '',
   });
 
@@ -162,6 +166,7 @@ class ProductDraft {
         currency: p.currency,
         warrantyMonths: p.warrantyMonths,
         serialNumber: p.serialNumber,
+        barcode: p.barcode,
         notes: p.notes,
       );
 
@@ -175,6 +180,7 @@ class ProductDraft {
   String currency;
   int warrantyMonths;
   String serialNumber;
+  String barcode;
   String notes;
 
   /// Local preview of the end date.
@@ -191,6 +197,7 @@ class ProductDraft {
         'currency': currency,
         'warranty_months': warrantyMonths,
         'serial_number': serialNumber.trim(),
+        'barcode': barcode.trim(),
         'notes': notes.trim(),
       };
 }

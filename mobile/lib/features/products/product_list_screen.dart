@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/api_client.dart';
 import '../../core/formatters.dart';
 import '../../models/models.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
+import '../scan/code_scanner.dart';
+import 'add_product_screen.dart';
 import 'product_detail_screen.dart';
 
 /// Ürün listesi: arama, kategori ve durum filtresi.
@@ -32,12 +35,58 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     'expired': 'Bitti'
   };
 
+  Future<void> _scanLookup() async {
+    final navigator = Navigator.of(context);
+    final code = await ref
+        .read(codeScannerProvider)
+        .scan(context, title: 'Ürünü taratarak bul');
+    if (code == null || !mounted) return;
+    try {
+      final repo = ref.read(repositoryProvider);
+      var found = await repo.products(code: code.lookupCode);
+      if (found.isEmpty && code.serial.isNotEmpty && code.barcode.isNotEmpty) {
+        found = await repo.products(code: code.barcode);
+      }
+      if (!mounted) return;
+      if (found.length == 1) {
+        await navigator.push(MaterialPageRoute<void>(
+            builder: (_) => ProductDetailScreen(productId: found.first.id)));
+      } else if (found.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('“${code.lookupCode}” ile kayıtlı ürün bulunamadı.'),
+          action: SnackBarAction(
+            label: 'Ürün ekle',
+            onPressed: () => navigator.push(MaterialPageRoute<void>(
+                builder: (_) => AddProductScreen(scanned: code))),
+          ),
+        ));
+      } else {
+        setState(() {
+          _search.text = code.lookupCode;
+          _query = ProductQuery(text: code.lookupCode);
+        });
+      }
+    } on ApiException catch (e) {
+      if (mounted) showSnack(context, e.userMessage, error: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final products = ref.watch(productsProvider(_query));
     final cats = ref.watch(categoriesProvider).valueOrNull ?? defaultCategories;
     return Scaffold(
-      appBar: AppBar(title: const Text('Ürünlerim')),
+      appBar: AppBar(
+        title: const Text('Ürünlerim'),
+        actions: [
+          IconButton(
+            key: const Key('scan_lookup'),
+            tooltip: 'Barkod veya seri numarasıyla bul',
+            icon: const Icon(Icons.qr_code_scanner),
+            onPressed: _scanLookup,
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(

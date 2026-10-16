@@ -103,9 +103,14 @@ class FakeRepository implements WarrantyRepository {
   Future<List<Product>> products(
           {String category = '',
           String status = '',
-          String query = ''}) async =>
+          String query = '',
+          String code = ''}) async =>
       items
           .where((p) => category.isEmpty || p.category == category)
+          .where((p) =>
+              code.isEmpty ||
+              p.serialNumber.toLowerCase() == code.toLowerCase() ||
+              p.barcode.toLowerCase() == code.toLowerCase())
           .where((p) =>
               query.isEmpty ||
               p.name.toLowerCase().contains(query.toLowerCase()))

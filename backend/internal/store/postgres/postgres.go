@@ -273,12 +273,12 @@ func (s *Store) RevokeAuthTokens(ctx context.Context, userID string, kind domain
 // ---- products ----
 
 const productCols = `id, user_id, name, brand, model, category, seller, purchase_date, purchase_price::float8,
-	currency, warranty_months, warranty_end, serial_number, notes, created_at, updated_at`
+	currency, warranty_months, warranty_end, serial_number, barcode, notes, created_at, updated_at`
 
 func scanProduct(row interface{ Scan(...any) error }) (domain.Product, error) {
 	var p domain.Product
 	err := row.Scan(&p.ID, &p.UserID, &p.Name, &p.Brand, &p.Model, &p.Category, &p.Seller, &p.PurchaseDate,
-		&p.Price, &p.Currency, &p.WarrantyMonths, &p.WarrantyEnd, &p.SerialNumber, &p.Notes, &p.CreatedAt, &p.UpdatedAt)
+		&p.Price, &p.Currency, &p.WarrantyMonths, &p.WarrantyEnd, &p.SerialNumber, &p.Barcode, &p.Notes, &p.CreatedAt, &p.UpdatedAt)
 	p.Currency = strings.TrimSpace(p.Currency)
 	return p, err
 }
@@ -289,10 +289,10 @@ func (s *Store) CreateProduct(ctx context.Context, p *domain.Product) error {
 		p.ID = domain.NewID()
 	}
 	return s.db.QueryRowContext(ctx, `INSERT INTO products (id, user_id, name, brand, model, category, seller,
-		purchase_date, purchase_price, currency, warranty_months, warranty_end, serial_number, notes)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING created_at, updated_at`,
+		purchase_date, purchase_price, currency, warranty_months, warranty_end, serial_number, notes, barcode)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING created_at, updated_at`,
 		p.ID, p.UserID, p.Name, p.Brand, p.Model, p.Category, p.Seller, p.PurchaseDate, p.Price, p.Currency,
-		p.WarrantyMonths, p.WarrantyEnd, p.SerialNumber, p.Notes).Scan(&p.CreatedAt, &p.UpdatedAt)
+		p.WarrantyMonths, p.WarrantyEnd, p.SerialNumber, p.Notes, p.Barcode).Scan(&p.CreatedAt, &p.UpdatedAt)
 }
 
 // GetProduct returns an owned product.
@@ -314,7 +314,12 @@ func (s *Store) ListProducts(ctx context.Context, userID string, f store.Product
 	}
 	if s := strings.TrimSpace(f.Query); s != "" {
 		args = append(args, "%"+escapeLike(s)+"%")
-		q += fmt.Sprintf(" AND (name ILIKE $%[1]d OR brand ILIKE $%[1]d OR model ILIKE $%[1]d OR seller ILIKE $%[1]d)", len(args))
+		q += fmt.Sprintf(" AND (name ILIKE $%[1]d OR brand ILIKE $%[1]d OR model ILIKE $%[1]d OR seller ILIKE $%[1]d"+
+			" OR serial_number ILIKE $%[1]d OR barcode ILIKE $%[1]d)", len(args))
+	}
+	if c := strings.TrimSpace(f.Code); c != "" {
+		args = append(args, strings.ToLower(c))
+		q += fmt.Sprintf(" AND (lower(barcode)=$%[1]d OR lower(serial_number)=$%[1]d)", len(args))
 	}
 	if !f.EndFrom.IsZero() {
 		args = append(args, f.EndFrom)
@@ -348,9 +353,9 @@ func (s *Store) UpdateProduct(ctx context.Context, p *domain.Product) error {
 	}
 	err := s.db.QueryRowContext(ctx, `UPDATE products SET name=$3, brand=$4, model=$5, category=$6, seller=$7,
 		purchase_date=$8, purchase_price=$9, currency=$10, warranty_months=$11, warranty_end=$12, serial_number=$13,
-		notes=$14, updated_at=now() WHERE id=$1 AND user_id=$2 RETURNING created_at, updated_at`,
+		notes=$14, barcode=$15, updated_at=now() WHERE id=$1 AND user_id=$2 RETURNING created_at, updated_at`,
 		p.ID, p.UserID, p.Name, p.Brand, p.Model, p.Category, p.Seller, p.PurchaseDate, p.Price, p.Currency,
-		p.WarrantyMonths, p.WarrantyEnd, p.SerialNumber, p.Notes).Scan(&p.CreatedAt, &p.UpdatedAt)
+		p.WarrantyMonths, p.WarrantyEnd, p.SerialNumber, p.Notes, p.Barcode).Scan(&p.CreatedAt, &p.UpdatedAt)
 	return notFound(err)
 }
 

@@ -36,7 +36,10 @@ abstract class WarrantyRepository {
 
   Future<List<ProductCategory>> categories();
   Future<List<Product>> products(
-      {String category = '', String status = '', String query = ''});
+      {String category = '',
+      String status = '',
+      String query = '',
+      String code = ''});
   Future<List<Product>> expiring({int days = 90});
   Future<Product> product(String id);
   Future<Product> createProduct(ProductDraft draft);
@@ -143,9 +146,14 @@ class ApiWarrantyRepository implements WarrantyRepository {
   Future<List<Product>> products(
           {String category = '',
           String status = '',
-          String query = ''}) async =>
-      _items(await api.get('/products',
-              query: {'category': category, 'status': status, 'q': query}))
+          String query = '',
+          String code = ''}) async =>
+      _items(await api.get('/products', query: {
+        'category': category,
+        'status': status,
+        'q': query,
+        'code': code
+      }))
           .map(Product.fromJson)
           .toList();
 

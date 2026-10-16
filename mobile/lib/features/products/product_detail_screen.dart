@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../scan/code_scanner.dart';
 import '../../core/api_client.dart';
 import '../../core/formatters.dart';
 import '../../models/models.dart';
@@ -80,6 +81,7 @@ class _ProductDetail extends ConsumerWidget {
             children: [
               ProductForm(
                 initial: ProductDraft.fromProduct(product),
+                onScan: () => ref.read(codeScannerProvider).scan(context),
                 categories: ref.read(categoriesProvider).valueOrNull ??
                     defaultCategories,
                 onSubmit: (draft) async {
@@ -275,6 +277,8 @@ class _ProductDetail extends ConsumerWidget {
             InfoRow(
                 'Seri numarası', p.serialNumber.isEmpty ? '-' : p.serialNumber,
                 icon: Icons.qr_code),
+            if (p.barcode.isNotEmpty)
+              InfoRow('Barkod', p.barcode, icon: Icons.barcode_reader),
             if (p.brand.isNotEmpty || p.model.isNotEmpty)
               InfoRow('Marka / Model',
                   [p.brand, p.model].where((s) => s.isNotEmpty).join(' / '),

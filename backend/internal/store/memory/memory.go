@@ -247,7 +247,10 @@ func (s *Store) ListProducts(_ context.Context, userID string, f store.ProductFi
 		if f.Category != "" && p.Category != f.Category {
 			continue
 		}
-		if q != "" && !strings.Contains(strings.ToLower(p.Name+" "+p.Brand+" "+p.Model+" "+p.Seller), q) {
+		if q != "" && !strings.Contains(strings.ToLower(p.Name+" "+p.Brand+" "+p.Model+" "+p.Seller+" "+p.SerialNumber+" "+p.Barcode), q) {
+			continue
+		}
+		if c := strings.TrimSpace(f.Code); c != "" && !strings.EqualFold(p.Barcode, c) && !strings.EqualFold(p.SerialNumber, c) {
 			continue
 		}
 		if !f.EndFrom.IsZero() && (p.WarrantyEnd.IsZero() || p.WarrantyEnd.Before(f.EndFrom)) {

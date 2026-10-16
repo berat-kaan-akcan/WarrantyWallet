@@ -43,10 +43,13 @@ Son güncelleme: 2026-10-16
 6. **Giriş doğrulama** — uzunluk kontrolleri bayt yerine karakter sayıyor (Türkçe harfler 2 bayt sayılıyordu); fiyat üst sınırı (1 milyar, `numeric(12,2)` taşmasını ve 500'ü önler), para birimi yalnızca 3 büyük harf, satın alma tarihi ≥ 1990-01-01, servis tarihi en fazla 1 yıl ileri; ürün listesinde geçersiz `status` filtresi ve 100 karakterden uzun arama 422 döner.
 7. **Hata/boş durumlar ve erişilebilirlik (mobil)** — `ErrorState` çevrimdışı hatayı ayrı gösteriyor ("Bağlantı yok"), bölüm içi hatalar için "Tekrar dene" düğmeli `InlineError` (ana ekran ve ürün detayındaki düz metin hatalar yerine), `EmptyState` büyük yazı boyutunda kaydırılabilir ve liste içinde de çalışıyor; dekoratif ikonlar ekran okuyucudan gizlendi, başlıklar `header` olarak işaretlendi, yükleniyor göstergeleri "Yükleniyor" diye okunuyor. Flutter erişilebilirlik kılavuzları (dokunma hedefi Android/iOS, etiketli hedefler, metin kontrastı) giriş, ana ekran, ürün ekleme, ürün detayı, ayarlar ve şifre sıfırlama ekranlarında test ediliyor. Mobil testler: 33/33.
 8. **docs/API.md** — tüm uç noktalar, hata kodları ve gerçek `curl` çağrılarından alınmış istek/yanıt örnekleri. ARCHITECTURE.md'deki tablo ve güvenlik bölümü güncellendi.
+9. **V2(a) Barkod/QR ve seri numarası tarama** — backend: `products.barcode` kolonu (migration `0003`), `GET /products?code=` ile barkod veya seri numarasına birebir (büyük/küçük harf duyarsız) arama, serbest metin arama artık seri/barkodu da kapsıyor; PostgreSQL'de `(user_id, lower(...))` indeksleri. Mobil: `mobile_scanner` 7.4.2 ile tarama ekranı (fener, elle giriş, kamera izni reddedilirse açıklama + elle giriş), `parseScannedCode` (GS1 `(01)GTIN(21)seri` ve ham GS ayraçlı biçim, EAN-13/8/UPC-A kontrol hanesi, "S/N", "SERİ NO" etiketleri, `?sn=` içeren URL'ler). Ürün formunda seri numarası ve barkod alanlarında tarama düğmesi; "Ürünlerim" ekranında "taratarak bul" → tek eşleşme ürünü açar, eşleşme yoksa kodu doldurulmuş "Ürün ekle" önerir. Mobil testler: 43/43.
+   Karar: kamera erişimi testlerde `CodeScanner` arayüzüyle soyutlandı (widget testleri sahte tarayıcı kullanır).
 
 ## Kalanlar / sonraki adımlar
 - [ ] CI'da mobil analiz/test sonuçlarını kontrol edip olası hataları düzeltmek
-- [ ] V2: barkod/QR ve seri numarası tarama, AI arıza asistanı, servis merkezi bulma, aile hesabı, bulut yedekleme
+- [x] V2: barkod/QR ve seri numarası tarama
+- [ ] V2: servis merkezi bulma, aile hesabı, bulut yedekleme
 - [x] Refresh token, şifre sıfırlama iskeleti
 - [ ] E-posta doğrulama ve gerçek SMTP gönderici
 - [ ] S3/MinIO depolama uygulaması, FCM push

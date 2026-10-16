@@ -101,6 +101,38 @@ func Run(t *testing.T, newStore func(t *testing.T) store.Store) {
 		}
 	})
 
+	t.Run("product_code_lookup", func(t *testing.T) {
+		s := newStore(t)
+		a := mkUser(t, s, "code@x.io")
+		b := mkUser(t, s, "other@x.io")
+		mk := func(user, name, serial, barcode string) {
+			p := &domain.Product{UserID: user, Name: name, PurchaseDate: domain.NewDate(2026, 1, 1), WarrantyMonths: 24,
+				SerialNumber: serial, Barcode: barcode}
+			p.Normalize()
+			if err := s.CreateProduct(ctx, p); err != nil {
+				t.Fatal(err)
+			}
+		}
+		mk(a, "Sony WH-1000XM5", "5023417", "4548736132610")
+		mk(a, "ASUS VG27AQ", "R9LMQS123456", "")
+		mk(b, "Başkasının ürünü", "5023417", "4548736132610")
+		for code, want := range map[string]string{"4548736132610": "Sony WH-1000XM5", "r9lmqs123456": "ASUS VG27AQ"} {
+			got, err := s.ListProducts(ctx, a, store.ProductFilter{Code: code})
+			if err != nil || len(got) != 1 || got[0].Name != want {
+				t.Fatalf("code %s: %v %+v", code, err, got)
+			}
+			if got[0].Barcode == "" && want == "Sony WH-1000XM5" {
+				t.Fatal("barcode not persisted")
+			}
+		}
+		if got, _ := s.ListProducts(ctx, a, store.ProductFilter{Code: "4548"}); len(got) != 0 {
+			t.Fatalf("code must match exactly, got %d", len(got))
+		}
+		if got, _ := s.ListProducts(ctx, a, store.ProductFilter{Query: "lmqs"}); len(got) != 1 {
+			t.Fatalf("free-text search should include serial numbers, got %d", len(got))
+		}
+	})
+
 	t.Run("products_scoped_and_cascade", func(t *testing.T) {
 		s := newStore(t)
 		a := mkUser(t, s, "a@x.io")
