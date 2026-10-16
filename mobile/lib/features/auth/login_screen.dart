@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/providers.dart';
+import '../../widgets/common.dart';
+import 'password_reset_screen.dart';
 
 /// Login / register screen.
 class LoginScreen extends ConsumerStatefulWidget {
@@ -27,19 +29,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  static String? validateEmail(String? v) {
-    final s = (v ?? '').trim();
-    if (s.isEmpty) return 'E-posta gerekli';
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(s)) {
-      return 'Geçerli bir e-posta girin';
-    }
-    return null;
-  }
+  static String? validateEmail(String? v) => validateEmailInput(v);
 
-  static String? validatePassword(String? v) {
-    if ((v ?? '').length < 8) return 'Şifre en az 8 karakter olmalı';
-    return null;
-  }
+  static String? validatePassword(String? v) => PasswordField.validate(v);
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -129,13 +121,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         validator: validatePassword,
                         onFieldSubmitted: (_) => _submit(),
                       ),
+                      if (!_registerMode)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            key: const Key('forgot_password'),
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => PasswordResetScreen(
+                                    initialEmail: _email.text.trim()),
+                              ),
+                            ),
+                            child: const Text('Şifremi unuttum'),
+                          ),
+                        ),
                       if (state.error != null) ...[
                         const SizedBox(height: 12),
-                        Text(
-                          state.error!,
-                          key: const Key('auth_error'),
-                          style: TextStyle(color: theme.colorScheme.error),
-                        ),
+                        ErrorText(state.error!, key: const Key('auth_error')),
                       ],
                       const SizedBox(height: 20),
                       FilledButton(

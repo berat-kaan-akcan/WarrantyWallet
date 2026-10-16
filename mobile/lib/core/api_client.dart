@@ -43,7 +43,14 @@ class ApiException implements Exception {
       case 'not_found':
         return 'Kayıt bulunamadı.';
       case 'unauthorized':
+      case 'invalid_refresh_token':
         return 'Oturumunuzun süresi doldu. Lütfen tekrar giriş yapın.';
+      case 'invalid_reset_token':
+        return 'Sıfırlama kodu geçersiz veya süresi dolmuş.';
+      case 'extraction_failed':
+        return 'Fiş okunamadı. Bilgileri elle girebilirsiniz.';
+      case 'timeout':
+        return 'İstek zaman aşımına uğradı. Lütfen tekrar deneyin.';
     }
     return status >= 500
         ? 'Sunucu hatası. Lütfen daha sonra tekrar deneyin.'
@@ -60,12 +67,17 @@ class ApiClient {
       {required this.baseUrl,
       required this.tokenProvider,
       http.Client? client,
-      this.onUnauthorized})
+      this.onUnauthorized,
+      this.refreshSession})
       : _client = client ?? http.Client();
 
   final String baseUrl;
   final Future<String?> Function() tokenProvider;
   final void Function()? onUnauthorized;
+
+  /// Called once when a request gets 401; returns true if a new access token was stored,
+  /// in which case the request is retried.
+  final Future<bool> Function()? refreshSession;
   final http.Client _client;
 
   static const _timeout = Duration(seconds: 30);
@@ -146,6 +158,26 @@ class ApiClient {
 
   Future<http.Response> _send(Future<http.Response> Function() fn,
       {Duration timeout = _timeout}) async {
+    try {
+      return await _sendOnce(fn, timeout);
+    } on ApiException catch (e) {
+      final refresh = refreshSession;
+      if (!e.isUnauthorized || refresh == null || !await refresh()) {
+        if (e.isUnauthorized) onUnauthorized?.call();
+        rethrow;
+      }
+    }
+    // Retry with the fresh access token (headers are rebuilt inside fn).
+    try {
+      return await _sendOnce(fn, timeout);
+    } on ApiException catch (e) {
+      if (e.isUnauthorized) onUnauthorized?.call();
+      rethrow;
+    }
+  }
+
+  Future<http.Response> _sendOnce(
+      Future<http.Response> Function() fn, Duration timeout) async {
     http.Response res;
     try {
       res = await fn().timeout(timeout);
@@ -173,7 +205,6 @@ class ApiClient {
     } on FormatException {
       // non-JSON error body
     }
-    if (res.statusCode == 401) onUnauthorized?.call();
     throw ApiException(res.statusCode, code, message, fields);
   }
 

@@ -6,10 +6,11 @@ import '../models/models.dart';
 
 /// Result of login/register.
 class AuthSession {
-  const AuthSession(this.token, this.user);
+  const AuthSession(this.token, this.user, {this.refreshToken});
 
   final String token;
   final AppUser user;
+  final String? refreshToken;
 }
 
 /// Service checklist response.
@@ -26,7 +27,12 @@ abstract class WarrantyRepository {
   Future<AuthSession> login(String email, String password);
   Future<AuthSession> register(String email, String password, String name);
   Future<AppUser> me();
+  Future<AppUser> updateProfile({required String name});
   Future<void> deleteAccount();
+  Future<void> logout(String? refreshToken);
+  Future<void> forgotPassword(String email);
+  Future<void> resetPassword(String token, String newPassword);
+  Future<void> changePassword(String currentPassword, String newPassword);
 
   Future<List<ProductCategory>> categories();
   Future<List<Product>> products(
@@ -76,8 +82,8 @@ class ApiWarrantyRepository implements WarrantyRepository {
   final ApiClient api;
 
   AuthSession _session(Map<String, dynamic> j) => AuthSession(
-      j['token'] as String,
-      AppUser.fromJson(j['user'] as Map<String, dynamic>));
+      j['token'] as String, AppUser.fromJson(j['user'] as Map<String, dynamic>),
+      refreshToken: j['refresh_token'] as String?);
 
   @override
   Future<AuthSession> login(String email, String password) async =>
@@ -96,7 +102,36 @@ class ApiWarrantyRepository implements WarrantyRepository {
   Future<AppUser> me() async => AppUser.fromJson(await api.get('/me'));
 
   @override
+  Future<AppUser> updateProfile({required String name}) async =>
+      AppUser.fromJson(await api.patch('/me', {'name': name.trim()}));
+
+  @override
   Future<void> deleteAccount() => api.delete('/me');
+
+  @override
+  Future<void> logout(String? refreshToken) async {
+    await api.post('/auth/logout', {'refresh_token': refreshToken ?? ''});
+  }
+
+  @override
+  Future<void> forgotPassword(String email) async {
+    await api.post('/auth/password/forgot', {'email': email.trim()});
+  }
+
+  @override
+  Future<void> resetPassword(String token, String newPassword) async {
+    await api.post('/auth/password/reset',
+        {'token': token.trim(), 'password': newPassword});
+  }
+
+  @override
+  Future<void> changePassword(
+      String currentPassword, String newPassword) async {
+    await api.put('/me/password', {
+      'current_password': currentPassword,
+      'new_password': newPassword,
+    });
+  }
 
   @override
   Future<List<ProductCategory>> categories() async =>

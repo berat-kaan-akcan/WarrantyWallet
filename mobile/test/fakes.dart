@@ -51,7 +51,7 @@ class FakeRepository implements WarrantyRepository {
   @override
   Future<AuthSession> login(String email, String password) async {
     if (loginError != null) throw ApiException(401, loginError!, 'bad');
-    return const AuthSession('tok', testUser);
+    return const AuthSession('tok', testUser, refreshToken: 'rtok');
   }
 
   @override
@@ -63,7 +63,38 @@ class FakeRepository implements WarrantyRepository {
   Future<AppUser> me() async => testUser;
 
   @override
+  Future<AppUser> updateProfile({required String name}) async => AppUser(
+      id: testUser.id, email: testUser.email, name: name, role: testUser.role);
+
+  @override
   Future<void> deleteAccount() async {}
+
+  final calls = <String>[];
+
+  @override
+  Future<void> logout(String? refreshToken) async =>
+      calls.add('logout:$refreshToken');
+
+  @override
+  Future<void> forgotPassword(String email) async => calls.add('forgot:$email');
+
+  @override
+  Future<void> resetPassword(String token, String newPassword) async {
+    if (token != 'good') {
+      throw const ApiException(400, 'invalid_reset_token', 'bad');
+    }
+    calls.add('reset:$token');
+  }
+
+  @override
+  Future<void> changePassword(
+      String currentPassword, String newPassword) async {
+    if (currentPassword != 'supersecret') {
+      throw const ApiException(422, 'validation_failed', 'invalid input',
+          {'current_password': 'incorrect password'});
+    }
+    calls.add('change');
+  }
 
   @override
   Future<List<ProductCategory>> categories() async => defaultCategories;

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
+import 'change_password_screen.dart';
 
 /// Hesap ve uygulama ayarları.
 class SettingsScreen extends ConsumerWidget {
@@ -38,6 +39,42 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _editName(BuildContext context, WidgetRef ref) async {
+    final current = ref.read(authControllerProvider).user?.name ?? '';
+    final controller = TextEditingController(text: current);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Adınızı düzenleyin'),
+        content: TextField(
+          key: const Key('name_field'),
+          controller: controller,
+          autofocus: true,
+          maxLength: 100,
+          decoration: const InputDecoration(labelText: 'Ad Soyad'),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Vazgeç')),
+          FilledButton(
+              key: const Key('name_save'),
+              onPressed: () => Navigator.pop(ctx, controller.text),
+              child: const Text('Kaydet')),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (name == null || name.trim() == current || !context.mounted) return;
+    try {
+      final user = await ref.read(repositoryProvider).updateProfile(name: name);
+      ref.read(authControllerProvider.notifier).userUpdated(user);
+      ref.invalidate(dashboardProvider);
+      if (context.mounted) showSnack(context, 'Profil güncellendi.');
+    } on ApiException catch (e) {
+      if (context.mounted) showSnack(context, e.userMessage, error: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authControllerProvider).user;
@@ -49,6 +86,15 @@ class SettingsScreen extends ConsumerWidget {
             leading: const Icon(Icons.person),
             title: Text(user?.name.isNotEmpty == true ? user!.name : 'Hesabım'),
             subtitle: Text(user?.email ?? ''),
+            trailing: const Icon(Icons.edit),
+            onTap: () => _editName(context, ref),
+          ),
+          ListTile(
+            key: const Key('change_password'),
+            leading: const Icon(Icons.lock_reset),
+            title: const Text('Şifreyi değiştir'),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (_) => const ChangePasswordScreen())),
           ),
           const ListTile(
             leading: Icon(Icons.notifications_active),

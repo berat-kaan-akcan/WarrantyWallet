@@ -13,14 +13,47 @@ final reminderSchedulerProvider =
 
 final repositoryProvider = Provider<WarrantyRepository>((ref) {
   final tokens = ref.watch(tokenStoreProvider);
+  final refresher = SessionRefresher(baseUrl: apiBaseUrl, tokens: tokens);
   final api = ApiClient(
     baseUrl: apiBaseUrl,
     tokenProvider: tokens.read,
+    refreshSession: refresher.refresh,
     onUnauthorized: () =>
         ref.read(authControllerProvider.notifier).sessionExpired(),
   );
   return ApiWarrantyRepository(api);
 });
+
+/// Exchanges the stored refresh token for a new token pair. Concurrent 401s share a
+/// single refresh call because refresh tokens are single use.
+class SessionRefresher {
+  SessionRefresher({required this.baseUrl, required this.tokens, this.client});
+
+  final String baseUrl;
+  final TokenStore tokens;
+  final ApiClient? client;
+  Future<bool>? _inFlight;
+
+  Future<bool> refresh() => _inFlight ??= _refresh().whenComplete(() {
+        _inFlight = null;
+      });
+
+  Future<bool> _refresh() async {
+    final rt = await tokens.readRefresh();
+    if (rt == null || rt.isEmpty) return false;
+    final api =
+        client ?? ApiClient(baseUrl: baseUrl, tokenProvider: () async => null);
+    try {
+      final j = await api.post('/auth/refresh', {'refresh_token': rt});
+      final token = j['token'] as String?;
+      if (token == null) return false;
+      await tokens.write(token, refreshToken: j['refresh_token'] as String?);
+      return true;
+    } on ApiException {
+      return false;
+    }
+  }
+}
 
 /// Authentication state.
 class AuthState {
@@ -86,7 +119,7 @@ class AuthController extends StateNotifier<AuthState> {
     state = state.copyWith(loading: true);
     try {
       final session = await call();
-      await _tokens.write(session.token);
+      await _tokens.write(session.token, refreshToken: session.refreshToken);
       if (!mounted) return false;
       state = AuthState(user: session.user, initialized: true);
       return true;
@@ -98,8 +131,19 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
+    final rt = await _tokens.readRefresh();
+    try {
+      await _repo.logout(rt);
+    } on ApiException {
+      // Signing out locally must work offline too.
+    }
     await _tokens.clear();
     state = const AuthState(initialized: true);
+  }
+
+  /// Updates the signed-in user after a profile change.
+  void userUpdated(AppUser user) {
+    if (state.isLoggedIn) state = state.copyWith(user: user);
   }
 
   void sessionExpired() {

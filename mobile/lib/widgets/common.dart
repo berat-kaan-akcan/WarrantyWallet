@@ -232,3 +232,95 @@ class InfoRow extends StatelessWidget {
     );
   }
 }
+
+/// Password input with a show/hide toggle and the shared length rule.
+class PasswordField extends StatefulWidget {
+  const PasswordField({
+    super.key,
+    required this.controller,
+    this.label = 'Şifre',
+    this.newPassword = false,
+    this.errorText,
+    this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final bool newPassword;
+  final String? errorText;
+  final ValueChanged<String>? onSubmitted;
+
+  /// Same rule as the backend (8–128 characters).
+  static String? validate(String? v) {
+    final s = v ?? '';
+    if (s.length < 8) return 'Şifre en az 8 karakter olmalı';
+    if (s.length > 128) return 'Şifre en fazla 128 karakter olabilir';
+    if (s.trim().isEmpty) return 'Şifre yalnızca boşluk olamaz';
+    return null;
+  }
+
+  @override
+  State<PasswordField> createState() => _PasswordFieldState();
+}
+
+class _PasswordFieldState extends State<PasswordField> {
+  bool _obscure = true;
+
+  @override
+  Widget build(BuildContext context) => TextFormField(
+        controller: widget.controller,
+        obscureText: _obscure,
+        decoration: InputDecoration(
+          labelText: widget.label,
+          border: const OutlineInputBorder(),
+          errorText: widget.errorText,
+          helperText: widget.newPassword ? 'En az 8 karakter' : null,
+          suffixIcon: IconButton(
+            tooltip: _obscure ? 'Şifreyi göster' : 'Şifreyi gizle',
+            icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
+            onPressed: () => setState(() => _obscure = !_obscure),
+          ),
+        ),
+        autofillHints: [
+          widget.newPassword
+              ? AutofillHints.newPassword
+              : AutofillHints.password
+        ],
+        validator: PasswordField.validate,
+        onFieldSubmitted: widget.onSubmitted,
+      );
+}
+
+/// Inline error message announced by screen readers.
+class ErrorText extends StatelessWidget {
+  const ErrorText(this.message, {super.key});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        liveRegion: true,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.error_outline,
+                size: 20, color: Theme.of(context).colorScheme.error),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(message,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ),
+          ],
+        ),
+      );
+}
+
+/// E-mail form validator shared by the auth screens.
+String? validateEmailInput(String? v) {
+  final s = (v ?? '').trim();
+  if (s.isEmpty) return 'E-posta gerekli';
+  if (s.length > 254 || !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(s)) {
+    return 'Geçerli bir e-posta girin';
+  }
+  return null;
+}

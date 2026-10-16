@@ -11,8 +11,12 @@ import '../models/models.dart';
 
 /// Persists the auth token.
 abstract class TokenStore {
+  /// Short-lived access token (JWT).
   Future<String?> read();
-  Future<void> write(String token);
+
+  /// Long-lived, single-use refresh token.
+  Future<String?> readRefresh();
+  Future<void> write(String token, {String? refreshToken});
   Future<void> clear();
 }
 
@@ -22,37 +26,59 @@ class SecureTokenStore implements TokenStore {
       : _storage = storage ?? const FlutterSecureStorage();
 
   static const _key = 'auth_token';
+  static const _refreshKey = 'refresh_token';
   final FlutterSecureStorage _storage;
   String? _cache;
+  String? _refreshCache;
 
   @override
   Future<String?> read() async => _cache ??= await _storage.read(key: _key);
 
   @override
-  Future<void> write(String token) async {
+  Future<String?> readRefresh() async =>
+      _refreshCache ??= await _storage.read(key: _refreshKey);
+
+  @override
+  Future<void> write(String token, {String? refreshToken}) async {
     _cache = token;
     await _storage.write(key: _key, value: token);
+    if (refreshToken != null) {
+      _refreshCache = refreshToken;
+      await _storage.write(key: _refreshKey, value: refreshToken);
+    }
   }
 
   @override
   Future<void> clear() async {
     _cache = null;
+    _refreshCache = null;
     await _storage.delete(key: _key);
+    await _storage.delete(key: _refreshKey);
   }
 }
 
 /// In-memory token store (tests).
 class MemoryTokenStore implements TokenStore {
   String? token;
+  String? refreshToken;
 
   @override
   Future<String?> read() async => token;
 
   @override
-  Future<void> write(String t) async => token = t;
+  Future<String?> readRefresh() async => refreshToken;
 
   @override
-  Future<void> clear() async => token = null;
+  Future<void> write(String t, {String? refreshToken}) async {
+    token = t;
+    if (refreshToken != null) this.refreshToken = refreshToken;
+  }
+
+  @override
+  Future<void> clear() async {
+    token = null;
+    refreshToken = null;
+  }
 }
 
 /// On-device OCR: photo → raw text. The text is sent with the image so the backend's
