@@ -226,17 +226,48 @@ class FakeRepository implements WarrantyRepository {
   Future<List<ServiceRecord>> serviceRecords({String productId = ''}) async =>
       const [];
 
+  List<ServiceRecord> services = [];
+  ServiceSummary serviceSummary = const ServiceSummary();
+  final serviceUpdates = <Map<String, Object?>>[];
+  final deletedServices = <String>[];
+
+  @override
+  Future<ServiceHistory> serviceHistory({ServiceStatus? status}) async =>
+      ServiceHistory(
+          services.where((r) => status == null || r.status == status).toList(),
+          serviceSummary);
+
+  @override
+  Future<ServiceRecord> serviceRecord(String id) async =>
+      services.firstWhere((r) => r.id == id,
+          orElse: () => throw ApiException(404, 'not_found', 'nf'));
+
+  @override
+  Future<void> deleteServiceRecord(String id) async {
+    deletedServices.add(id);
+    services = services.where((r) => r.id != id).toList();
+  }
+
   @override
   Future<ServiceRecord> updateServiceRecord(String id,
-          {ServiceStatus? status,
-          String? serviceName,
-          DateTime? serviceDate,
-          String? notes}) async =>
-      ServiceRecord(
-          id: id,
-          productId: 'p1',
-          problem: ProblemType.other,
-          status: status ?? ServiceStatus.open);
+      {ServiceStatus? status,
+      String? serviceName,
+      DateTime? serviceDate,
+      String? notes,
+      double? cost,
+      String? eventNote}) async {
+    serviceUpdates.add({
+      'id': id,
+      'status': status,
+      'cost': cost,
+      'event_note': eventNote,
+    });
+    return ServiceRecord(
+        id: id,
+        productId: 'p1',
+        problem: ProblemType.other,
+        status: status ?? ServiceStatus.open);
+  }
 
   @override
   Future<ChecklistResult> checklist(String productId) async =>

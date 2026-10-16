@@ -7,38 +7,69 @@ import '../../models/models.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
 
-/// Servis geçmişi listesi.
+/// Servis geçmişi: özet, durum filtresi ve kayıt listesi.
 class ServiceHistoryScreen extends ConsumerWidget {
   const ServiceHistoryScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final records = ref.watch(serviceHistoryProvider);
+    final history = ref.watch(serviceHistoryProvider);
+    final filter = ref.watch(serviceStatusFilterProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Servis Geçmişi')),
-      body: records.when(
-        data: (items) => RefreshIndicator(
+      body: history.when(
+        skipLoadingOnReload: true,
+        data: (h) => RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(serviceHistoryProvider);
             await ref.read(serviceHistoryProvider.future);
           },
-          child: items.isEmpty
-              ? ListView(
-                  children: const [
-                    EmptyState(
-                      icon: Icons.build_outlined,
-                      title: 'Servis kaydı yok',
-                      message:
-                          'Bir ürün arızalandığında ürün detayından "Servis Kaydı Oluştur"a dokunun.',
-                    ),
-                  ],
-                )
-              : ListView.separated(
-                  itemCount: items.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, i) =>
-                      ServiceRecordTile(record: items[i]),
+          child: ListView(
+            children: [
+              if (h.summary.total > 0) ServiceSummaryCard(summary: h.summary),
+              if (h.summary.total > 0)
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      for (final s in <ServiceStatus?>[
+                        null,
+                        ...ServiceStatus.values
+                      ])
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: ChoiceChip(
+                            key: Key('filter_${s?.api ?? 'all'}'),
+                            label: Text(s == null
+                                ? 'Tümü (${h.summary.total})'
+                                : '${s.label} (${h.summary.count(s)})'),
+                            selected: filter == s,
+                            onSelected: (_) => ref
+                                .read(serviceStatusFilterProvider.notifier)
+                                .state = s,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
+              if (h.items.isEmpty)
+                EmptyState(
+                  icon: Icons.build_outlined,
+                  title: filter == null
+                      ? 'Servis kaydı yok'
+                      : 'Bu durumda kayıt yok',
+                  message: filter == null
+                      ? 'Bir ürün arızalandığında ürün detayından "Ürünüm arızalandı"ya dokunun.'
+                      : null,
+                )
+              else
+                for (final r in h.items) ...[
+                  ServiceRecordTile(record: r),
+                  const Divider(height: 1),
+                ],
+            ],
+          ),
         ),
         loading: () => const LoadingView(),
         error: (e, _) => ErrorState(
@@ -46,6 +77,52 @@ class ServiceHistoryScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Totals across all service records.
+class ServiceSummaryCard extends StatelessWidget {
+  const ServiceSummaryCard({super.key, required this.summary});
+
+  final ServiceSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final avg = summary.avgResolutionDays;
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            _stat(context, '${summary.active}', 'Devam eden'),
+            _stat(
+                context, '${summary.count(ServiceStatus.resolved)}', 'Çözülen'),
+            _stat(context, formatMoney(summary.totalCost), 'Toplam ücret'),
+            _stat(context, avg == null ? '-' : '${avg.round()} gün',
+                'Ort. çözüm'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _stat(BuildContext context, String value, String label) => Expanded(
+        child: MergeSemantics(
+          child: Column(
+            children: [
+              Text(value,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700)),
+              Text(label,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
+        ),
+      );
 }
 
 /// Colour for a service status.
@@ -62,7 +139,7 @@ Color serviceStatusColor(ServiceStatus s) {
   }
 }
 
-/// One service record row; tap to update its status.
+/// One service record row; tap to open its detail and timeline.
 class ServiceRecordTile extends ConsumerWidget {
   const ServiceRecordTile({super.key, required this.record});
 
@@ -81,15 +158,13 @@ class ServiceRecordTile extends ConsumerWidget {
       subtitle: Text([
         r.problem.label,
         if (r.serviceName.isNotEmpty) r.serviceName,
+        if (r.cost > 0) formatMoney(r.cost),
         formatDate(r.serviceDate ?? r.createdAt),
       ].join(' • ')),
       trailing: Text(r.status.label,
           style: TextStyle(color: color, fontWeight: FontWeight.w600)),
-      onTap: () => showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        builder: (_) => ServiceUpdateSheet(record: r),
-      ),
+      onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => ServiceRecordDetailScreen(recordId: r.id))),
     );
   }
 }
@@ -109,6 +184,12 @@ class _ServiceUpdateSheetState extends ConsumerState<ServiceUpdateSheet> {
   late final _serviceName =
       TextEditingController(text: widget.record.serviceName);
   late final _notes = TextEditingController(text: widget.record.notes);
+  late final _cost = TextEditingController(
+      text: widget.record.cost > 0
+          ? widget.record.cost.toStringAsFixed(2).replaceAll('.', ',')
+          : '');
+  final _eventNote = TextEditingController();
+  String? _costError;
   late DateTime? _date = widget.record.serviceDate;
   bool _saving = false;
 
@@ -116,11 +197,21 @@ class _ServiceUpdateSheetState extends ConsumerState<ServiceUpdateSheet> {
   void dispose() {
     _serviceName.dispose();
     _notes.dispose();
+    _cost.dispose();
+    _eventNote.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
-    setState(() => _saving = true);
+    final cost = parseMoneyInput(_cost.text);
+    if (cost == null) {
+      setState(() => _costError = 'Geçerli bir tutar girin');
+      return;
+    }
+    setState(() {
+      _costError = null;
+      _saving = true;
+    });
     final navigator = Navigator.of(context);
     try {
       await ref.read(repositoryProvider).updateServiceRecord(
@@ -129,8 +220,12 @@ class _ServiceUpdateSheetState extends ConsumerState<ServiceUpdateSheet> {
             serviceName: _serviceName.text.trim(),
             serviceDate: _date,
             notes: _notes.text.trim(),
+            cost: cost,
+            eventNote:
+                _status != widget.record.status ? _eventNote.text.trim() : null,
           );
       ref.invalidate(serviceHistoryProvider);
+      ref.invalidate(serviceRecordProvider(widget.record.id));
       ref.invalidate(productServiceRecordsProvider(widget.record.productId));
       ref.invalidate(dashboardProvider);
       navigator.pop();
@@ -166,6 +261,18 @@ class _ServiceUpdateSheetState extends ConsumerState<ServiceUpdateSheet> {
                     ),
                 ],
               ),
+              if (_status != widget.record.status) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  key: const Key('event_note'),
+                  controller: _eventNote,
+                  maxLength: 500,
+                  decoration: const InputDecoration(
+                      labelText: 'Durum notu (isteğe bağlı)',
+                      hintText: 'Örn. Servise teslim edildi',
+                      border: OutlineInputBorder()),
+                ),
+              ],
               const SizedBox(height: 12),
               TextField(
                 controller: _serviceName,
@@ -194,6 +301,18 @@ class _ServiceUpdateSheetState extends ConsumerState<ServiceUpdateSheet> {
               ),
               const SizedBox(height: 12),
               TextField(
+                key: const Key('service_cost'),
+                controller: _cost,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                    labelText: 'Ödenen ücret (TL)',
+                    helperText: 'Garanti kapsamında ücretsizse boş bırakın',
+                    errorText: _costError,
+                    border: const OutlineInputBorder()),
+              ),
+              const SizedBox(height: 12),
+              TextField(
                 controller: _notes,
                 maxLines: 3,
                 decoration: const InputDecoration(
@@ -201,12 +320,137 @@ class _ServiceUpdateSheetState extends ConsumerState<ServiceUpdateSheet> {
               ),
               const SizedBox(height: 16),
               FilledButton(
+                  key: const Key('service_save'),
                   onPressed: _saving ? null : _save,
                   child: const Text('Kaydet')),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// One service record with its status timeline.
+class ServiceRecordDetailScreen extends ConsumerWidget {
+  const ServiceRecordDetailScreen({super.key, required this.recordId});
+
+  final String recordId;
+
+  Future<void> _delete(
+      BuildContext context, WidgetRef ref, ServiceRecord r) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Servis kaydı silinsin mi?'),
+        content: const Text(
+            'Kayıt ve zaman çizelgesi silinir. Eklenen fotoğraflar ürünün belgelerinde kalır.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Vazgeç')),
+          TextButton(
+              key: const Key('confirm_delete'),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Sil')),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    final navigator = Navigator.of(context);
+    try {
+      await ref.read(repositoryProvider).deleteServiceRecord(r.id);
+      ref.invalidate(serviceHistoryProvider);
+      ref.invalidate(productServiceRecordsProvider(r.productId));
+      ref.invalidate(dashboardProvider);
+      navigator.pop();
+    } on ApiException catch (e) {
+      if (context.mounted) showSnack(context, e.userMessage, error: true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final record = ref.watch(serviceRecordProvider(recordId));
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Servis kaydı'),
+        actions: [
+          if (record.valueOrNull != null)
+            IconButton(
+              key: const Key('delete_service'),
+              tooltip: 'Sil',
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () => _delete(context, ref, record.value!),
+            ),
+        ],
+      ),
+      body: record.when(
+        data: (r) => _body(context, r),
+        loading: () => const LoadingView(),
+        error: (e, _) => ErrorState(
+            error: e,
+            onRetry: () => ref.invalidate(serviceRecordProvider(recordId))),
+      ),
+    );
+  }
+
+  Widget _body(BuildContext context, ServiceRecord r) {
+    final theme = Theme.of(context);
+    final color = serviceStatusColor(r.status);
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(r.productName.isEmpty ? r.problem.label : r.productName,
+            style: theme.textTheme.titleLarge),
+        const SizedBox(height: 4),
+        Text(r.status.label,
+            style: TextStyle(color: color, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        InfoRow('Sorun', r.problem.label),
+        if (r.description.isNotEmpty) InfoRow('Açıklama', r.description),
+        InfoRow('Garanti', r.underWarranty ? 'Kapsamında' : 'Kapsam dışı'),
+        if (r.serviceName.isNotEmpty) InfoRow('Servis', r.serviceName),
+        if (r.serviceDate != null)
+          InfoRow('Servis tarihi', formatDate(r.serviceDate)),
+        InfoRow(
+            'Ücret', r.cost > 0 ? formatMoney(r.cost) : 'Ücretsiz / girilmedi'),
+        InfoRow('Açılış', formatDate(r.createdAt)),
+        if (r.resolutionDays != null)
+          InfoRow('Çözüm süresi', '${r.resolutionDays} gün'),
+        if (r.notes.isNotEmpty) InfoRow('Notlar', r.notes),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          key: const Key('update_service'),
+          onPressed: () => showModalBottomSheet<void>(
+            context: context,
+            isScrollControlled: true,
+            builder: (_) => ServiceUpdateSheet(record: r),
+          ),
+          icon: const Icon(Icons.edit),
+          label: const Text('Durumu güncelle'),
+        ),
+        const SizedBox(height: 24),
+        Semantics(
+            header: true,
+            child: Text('Zaman çizelgesi', style: theme.textTheme.titleMedium)),
+        if (r.events.isEmpty)
+          const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text('Henüz durum değişikliği yok.'))
+        else
+          for (final e in r.events.reversed)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.circle,
+                  size: 14, color: serviceStatusColor(e.status)),
+              title: Text(e.status.label),
+              subtitle: Text([
+                formatDateTime(e.createdAt),
+                if (e.note.isNotEmpty) e.note,
+              ].join('\n')),
+            ),
+      ],
     );
   }
 }

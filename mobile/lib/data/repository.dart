@@ -61,11 +61,16 @@ abstract class WarrantyRepository {
   Future<ServiceRecord> createServiceRecord(
       String productId, ProblemType problem, String description);
   Future<List<ServiceRecord>> serviceRecords({String productId = ''});
+  Future<ServiceHistory> serviceHistory({ServiceStatus? status});
+  Future<ServiceRecord> serviceRecord(String id);
+  Future<void> deleteServiceRecord(String id);
   Future<ServiceRecord> updateServiceRecord(String id,
       {ServiceStatus? status,
       String? serviceName,
       DateTime? serviceDate,
-      String? notes});
+      String? notes,
+      double? cost,
+      String? eventNote});
   Future<ChecklistResult> checklist(String productId);
   Future<Diagnosis> diagnose(
       String productId, ProblemType problem, String description);
@@ -250,16 +255,39 @@ class ApiWarrantyRepository implements WarrantyRepository {
   }
 
   @override
+  Future<ServiceHistory> serviceHistory({ServiceStatus? status}) async {
+    final j = await api.get('/service-records',
+        query: {if (status != null) 'status': status.api});
+    return ServiceHistory(
+      _items(j).map(ServiceRecord.fromJson).toList(),
+      ServiceSummary.fromJson(
+          (j['summary'] as Map<String, dynamic>?) ?? const {}),
+    );
+  }
+
+  @override
+  Future<ServiceRecord> serviceRecord(String id) async =>
+      ServiceRecord.fromJson(await api.get('/service-records/$id'));
+
+  @override
+  Future<void> deleteServiceRecord(String id) =>
+      api.delete('/service-records/$id');
+
+  @override
   Future<ServiceRecord> updateServiceRecord(String id,
           {ServiceStatus? status,
           String? serviceName,
           DateTime? serviceDate,
-          String? notes}) async =>
+          String? notes,
+          double? cost,
+          String? eventNote}) async =>
       ServiceRecord.fromJson(await api.patch('/service-records/$id', {
         if (status != null) 'status': status.api,
         if (serviceName != null) 'service_name': serviceName,
         if (serviceDate != null) 'service_date': isoDate(serviceDate),
         if (notes != null) 'notes': notes,
+        if (cost != null) 'cost': cost,
+        if (eventNote != null && eventNote.isNotEmpty) 'event_note': eventNote,
       }));
 
   @override

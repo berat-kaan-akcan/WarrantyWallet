@@ -291,6 +291,9 @@ class ServiceRecord {
     this.productName = '',
     this.createdAt,
     this.checklist = const [],
+    this.cost = 0,
+    this.resolvedAt,
+    this.events = const [],
   });
 
   factory ServiceRecord.fromJson(Map<String, dynamic> j) => ServiceRecord(
@@ -306,6 +309,9 @@ class ServiceRecord {
         productName: _s(j['product_name']),
         createdAt: _ts(j['created_at']),
         checklist: _list(j['checklist']).map(ChecklistItem.fromJson).toList(),
+        cost: _d(j['cost']),
+        resolvedAt: _ts(j['resolved_at']),
+        events: _list(j['events']).map(ServiceEvent.fromJson).toList(),
       );
 
   final String id;
@@ -320,6 +326,71 @@ class ServiceRecord {
   final String productName;
   final DateTime? createdAt;
   final List<ChecklistItem> checklist;
+  final double cost;
+  final DateTime? resolvedAt;
+  final List<ServiceEvent> events; // only filled by the detail endpoint
+
+  bool get isClosed =>
+      status == ServiceStatus.resolved || status == ServiceStatus.cancelled;
+
+  /// Whole days from opening to resolution (null while open).
+  int? get resolutionDays => createdAt == null || resolvedAt == null
+      ? null
+      : resolvedAt!.difference(createdAt!).inDays;
+}
+
+/// One status change on a service record's timeline.
+class ServiceEvent {
+  const ServiceEvent(this.status, this.note, this.createdAt);
+
+  factory ServiceEvent.fromJson(Map<String, dynamic> j) => ServiceEvent(
+      ServiceStatus.fromApi(_s(j['status'])),
+      _s(j['note']),
+      _ts(j['created_at']));
+
+  final ServiceStatus status;
+  final String note;
+  final DateTime? createdAt;
+}
+
+/// Aggregates for the service history screen.
+class ServiceSummary {
+  const ServiceSummary({
+    this.total = 0,
+    this.active = 0,
+    this.byStatus = const {},
+    this.totalCost = 0,
+    this.avgResolutionDays,
+  });
+
+  factory ServiceSummary.fromJson(Map<String, dynamic> j) => ServiceSummary(
+        total: _i(j['total']),
+        active: _i(j['active']),
+        byStatus: {
+          for (final e in ((j['by_status'] as Map?) ?? const {}).entries)
+            ServiceStatus.fromApi(_s(e.key)): _i(e.value),
+        },
+        totalCost: _d(j['total_cost']),
+        avgResolutionDays: j['avg_resolution_days'] is num
+            ? (j['avg_resolution_days'] as num).toDouble()
+            : null,
+      );
+
+  final int total;
+  final int active;
+  final Map<ServiceStatus, int> byStatus;
+  final double totalCost;
+  final double? avgResolutionDays;
+
+  int count(ServiceStatus s) => byStatus[s] ?? 0;
+}
+
+/// Result of GET /service-records.
+class ServiceHistory {
+  const ServiceHistory(this.items, this.summary);
+
+  final List<ServiceRecord> items;
+  final ServiceSummary summary;
 }
 
 /// One possible cause from the AI fault assistant.

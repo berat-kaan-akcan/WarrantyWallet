@@ -11,6 +11,7 @@ import '../../services/services.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
 import '../service/report_issue_screen.dart';
+import '../service/service_history_screen.dart';
 import 'add_product_screen.dart';
 import 'document_viewer.dart';
 import 'product_form.dart';
@@ -339,6 +340,11 @@ class _ProductDetail extends ConsumerWidget {
                             title: Text(s.problem.label),
                             subtitle: Text(
                                 '${s.status.label} • ${formatDate(s.createdAt)}'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                    builder: (_) => ServiceRecordDetailScreen(
+                                        recordId: s.id))),
                           ),
                       ],
                     ),

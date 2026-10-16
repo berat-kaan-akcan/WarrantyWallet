@@ -8,6 +8,14 @@ String formatDate(DateTime? d) {
   return '${two(d.day)}.${two(d.month)}.${d.year}';
 }
 
+/// Formats a timestamp in local time as dd.MM.yyyy HH:mm ("-" for null).
+String formatDateTime(DateTime? d) {
+  if (d == null) return '-';
+  final l = d.toLocal();
+  String two(int v) => v.toString().padLeft(2, '0');
+  return '${formatDate(l)} ${two(l.hour)}:${two(l.minute)}';
+}
+
 /// Formats an ISO date for the API (yyyy-MM-dd).
 String isoDate(DateTime d) {
   String two(int v) => v.toString().padLeft(2, '0');
@@ -85,4 +93,14 @@ String formatDaysLeft(int days) {
   if (days > 0) return '$days gün kaldı';
   if (days == 0) return 'Bugün bitiyor';
   return '${-days} gün önce bitti';
+}
+
+/// Parses a user-typed amount ("1.250,50", "1250.5", "" → 0); null when invalid
+/// or outside 0–1 milyar (the backend limit).
+double? parseMoneyInput(String text) {
+  var t = text.trim().replaceAll(' ', '');
+  if (t.isEmpty) return 0;
+  if (t.contains(',')) t = t.replaceAll('.', '').replaceAll(',', '.');
+  final v = double.tryParse(t);
+  return v == null || v.isNaN || v < 0 || v > 1e9 ? null : v;
 }

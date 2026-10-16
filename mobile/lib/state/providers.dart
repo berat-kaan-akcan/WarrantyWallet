@@ -211,8 +211,15 @@ final productProvider = FutureProvider.family<Product, String>(
 final documentsProvider = FutureProvider.family<List<ProductDocument>, String>(
     (ref, id) => ref.watch(repositoryProvider).documents(id));
 
-final serviceHistoryProvider = FutureProvider<List<ServiceRecord>>(
-    (ref) => ref.watch(repositoryProvider).serviceRecords());
+/// Status filter of the service history screen (null = all).
+final serviceStatusFilterProvider = StateProvider<ServiceStatus?>((_) => null);
+
+final serviceHistoryProvider = FutureProvider<ServiceHistory>((ref) => ref
+    .watch(repositoryProvider)
+    .serviceHistory(status: ref.watch(serviceStatusFilterProvider)));
+
+final serviceRecordProvider = FutureProvider.family<ServiceRecord, String>(
+    (ref, id) => ref.watch(repositoryProvider).serviceRecord(id));
 
 final productServiceRecordsProvider =
     FutureProvider.family<List<ServiceRecord>, String>(
