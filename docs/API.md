@@ -321,9 +321,19 @@ Zaman çizelgesi de silinir; kayda bağlı fotoğraflar ürünün belgeleri olar
   "greeting":"İyi akşamlar, Berat","total_products":1,"active_warranties":1,"expiring_soon":0,"expired":0,"unknown":0,
   "total_spent":{"TRY":12499},"service_records":1,"open_service_records":1,
   "by_category":[{"category":"monitor","name":"Monitör","count":1,"total":12499}],
-  "upcoming":[]
+  "upcoming":[],
+  "analytics":{
+    "primary_currency":"TRY",
+    "protected_value":{"TRY":12499},
+    "coverage_rate":1,
+    "expiry_timeline":[{"month":"2026-10","count":0},"... 12 ay ..."],
+    "monthly_purchases":[{"month":"2025-11","count":0},"...",{"month":"2026-09","count":1,"total":12499},{"month":"2026-10","count":0}],
+    "top_brands":[{"brand":"ASUS","count":1}],
+    "service":{"total":1,"active":1,"resolved":0,"under_warranty":1,"total_cost":0,"avg_resolution_days":null}
+  }
 }
 ```
+`analytics` (V2): `protected_value` hâlâ garanti kapsamındaki ürünlerin fiyat toplamı (para birimi başına); `coverage_rate` garantisi süren ürünlerin oranı (0–1); `expiry_timeline` bu ay dahil önümüzdeki 12 ayda biten garanti sayısı; `monthly_purchases` son 12 ayın alımları (`total` yalnızca `primary_currency`, yani en çok harcanan para birimi için toplanır); `top_brands` en çok ürünü olan 5 marka (büyük/küçük harf duyarsız); `service` servis kayıtlarının özeti (ortalama çözüm süresi gün olarak, yoksa `null`).
 
 ---
 

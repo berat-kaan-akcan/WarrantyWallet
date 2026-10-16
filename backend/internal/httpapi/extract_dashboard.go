@@ -197,6 +197,7 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		"upcoming":             upcoming,
 		"open_service_records": open,
 		"service_records":      len(recs),
+		"analytics":            buildAnalytics(products, recs, s.today()),
 	})
 }
 
