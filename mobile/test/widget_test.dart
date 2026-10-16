@@ -9,7 +9,6 @@ import 'package:warranty_wallet/core/warranty.dart';
 import 'package:warranty_wallet/features/dashboard/dashboard_screen.dart';
 import 'package:warranty_wallet/features/products/add_product_screen.dart';
 import 'package:warranty_wallet/features/service/report_issue_screen.dart';
-import 'package:warranty_wallet/models/models.dart';
 import 'package:warranty_wallet/services/services.dart';
 import 'package:warranty_wallet/state/providers.dart';
 
@@ -20,13 +19,15 @@ class FakePicker implements ReceiptImagePicker {
   Future<PickedImage?> pick({required bool camera}) async => null;
 }
 
-List<Override> overrides(FakeRepository repo, {String? token, FakeReminderScheduler? scheduler}) {
+List<Override> overrides(FakeRepository repo,
+    {String? token, FakeReminderScheduler? scheduler}) {
   final tokens = MemoryTokenStore()..token = token;
   return [
     repositoryProvider.overrideWithValue(repo),
     tokenStoreProvider.overrideWithValue(tokens),
     ocrServiceProvider.overrideWithValue(NoopOcrService()),
-    reminderSchedulerProvider.overrideWithValue(scheduler ?? FakeReminderScheduler()),
+    reminderSchedulerProvider
+        .overrideWithValue(scheduler ?? FakeReminderScheduler()),
     imageSourceProvider.overrideWithValue(FakePicker()),
   ];
 }
@@ -47,7 +48,8 @@ void main() {
   testWidgets('login validates input and signs in', (tester) async {
     useTallScreen(tester);
     final repo = FakeRepository();
-    await tester.pumpWidget(ProviderScope(overrides: overrides(repo), child: const WarrantyWalletApp()));
+    await tester.pumpWidget(ProviderScope(
+        overrides: overrides(repo), child: const WarrantyWalletApp()));
     await tester.pumpAndSettle();
 
     expect(find.text('Warranty Wallet'), findsOneWidget);
@@ -68,7 +70,8 @@ void main() {
   testWidgets('login shows API error message', (tester) async {
     useTallScreen(tester);
     final repo = FakeRepository()..loginError = 'invalid_credentials';
-    await tester.pumpWidget(ProviderScope(overrides: overrides(repo), child: const WarrantyWalletApp()));
+    await tester.pumpWidget(ProviderScope(
+        overrides: overrides(repo), child: const WarrantyWalletApp()));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('email')), 'berat@test.io');
     await tester.enterText(find.byKey(const Key('password')), 'wrongpass1');
@@ -82,19 +85,23 @@ void main() {
     final scheduler = FakeReminderScheduler();
     final repo = FakeRepository();
     await tester.pumpWidget(
-      ProviderScope(overrides: overrides(repo, token: 'tok', scheduler: scheduler), child: const WarrantyWalletApp()),
+      ProviderScope(
+          overrides: overrides(repo, token: 'tok', scheduler: scheduler),
+          child: const WarrantyWalletApp()),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('Günaydın, Berat'), findsOneWidget);
-    expect(tester.widget<Text>(find.byKey(const Key('active_count'))).data, '2');
+    expect(
+        tester.widget<Text>(find.byKey(const Key('active_count'))).data, '2');
     expect(find.text('Garanti yakında bitiyor'), findsOneWidget);
     expect(find.text('16 gün kaldı'), findsOneWidget);
     // product list loaded in the shell → device reminders synced
     expect(scheduler.synced, containsAll(['p1', 'p2']));
   });
 
-  testWidgets('manual add product computes the warranty end date and saves', (tester) async {
+  testWidgets('manual add product computes the warranty end date and saves',
+      (tester) async {
     useTallScreen(tester);
     final repo = FakeRepository();
     await tester.pumpWidget(wrap(const AddProductScreen(), repo));
@@ -108,7 +115,8 @@ void main() {
     await tester.pumpAndSettle();
 
     final now = DateTime.now();
-    final expected = formatDate(warrantyEnd(DateTime.utc(now.year, now.month, now.day), defaultWarrantyMonths));
+    final expected = formatDate(warrantyEnd(
+        DateTime.utc(now.year, now.month, now.day), defaultWarrantyMonths));
     expect(find.text(expected), findsOneWidget);
 
     await tester.ensureVisible(find.byKey(const Key('f_submit')));
@@ -136,11 +144,13 @@ void main() {
     expect(repo.created, isEmpty);
   });
 
-  testWidgets('dashboard shows totals and category distribution', (tester) async {
+  testWidgets('dashboard shows totals and category distribution',
+      (tester) async {
     useTallScreen(tester);
     final repo = FakeRepository();
     final d = await repo.dashboard();
-    await tester.pumpWidget(MaterialApp(home: Scaffold(body: DashboardView(d: d))));
+    await tester
+        .pumpWidget(MaterialApp(home: Scaffold(body: DashboardView(d: d))));
     expect(find.text('Toplam ürün'), findsOneWidget);
     expect(find.text('Aktif garanti'), findsOneWidget);
     expect(find.text('Garanti dışı'), findsOneWidget);
@@ -149,10 +159,12 @@ void main() {
     expect(find.text('Kulaklık'), findsOneWidget);
   });
 
-  testWidgets('broken product flow creates a service record with checklist', (tester) async {
+  testWidgets('broken product flow creates a service record with checklist',
+      (tester) async {
     useTallScreen(tester);
     final repo = FakeRepository();
-    await tester.pumpWidget(wrap(ReportIssueScreen(product: monitorProduct()), repo));
+    await tester
+        .pumpWidget(wrap(ReportIssueScreen(product: monitorProduct()), repo));
     await tester.ensureVisible(find.byKey(const Key('create_service')));
     await tester.tap(find.byKey(const Key('create_service')));
     await tester.pump();

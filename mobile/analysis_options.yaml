@@ -8,6 +8,10 @@ analyzer:
     prefer_const_literals_to_create_immutables: ignore
     prefer_const_declarations: ignore
     prefer_const_constructors_in_immutables: ignore
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
 
 linter:
   rules:

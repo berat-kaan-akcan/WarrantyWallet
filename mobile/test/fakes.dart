@@ -5,7 +5,8 @@ import 'package:warranty_wallet/core/warranty.dart';
 import 'package:warranty_wallet/data/repository.dart';
 import 'package:warranty_wallet/models/models.dart';
 
-const testUser = AppUser(id: 'u1', email: 'berat@test.io', name: 'Berat Kaan', role: 'user');
+const testUser =
+    AppUser(id: 'u1', email: 'berat@test.io', name: 'Berat Kaan', role: 'user');
 
 Product monitorProduct({int daysLeft = 697}) => Product(
       id: 'p1',
@@ -19,7 +20,8 @@ Product monitorProduct({int daysLeft = 697}) => Product(
       warrantyMonths: 24,
       warrantyEnd: DateTime.utc(2028, 9, 12),
       serialNumber: 'M1LMQS123',
-      status: daysLeft <= 30 ? WarrantyStatus.expiringSoon : WarrantyStatus.active,
+      status:
+          daysLeft <= 30 ? WarrantyStatus.expiringSoon : WarrantyStatus.active,
       daysLeft: daysLeft,
     );
 
@@ -37,7 +39,8 @@ final headphones = Product(
 
 /// In-memory fake used by widget tests.
 class FakeRepository implements WarrantyRepository {
-  FakeRepository({List<Product>? products, this.extraction}) : items = products ?? [monitorProduct(), headphones];
+  FakeRepository({List<Product>? products, this.extraction})
+      : items = products ?? [monitorProduct(), headphones];
 
   List<Product> items;
   ExtractionResult? extraction;
@@ -52,7 +55,8 @@ class FakeRepository implements WarrantyRepository {
   }
 
   @override
-  Future<AuthSession> register(String email, String password, String name) async =>
+  Future<AuthSession> register(
+          String email, String password, String name) async =>
       const AuthSession('tok', testUser);
 
   @override
@@ -65,17 +69,26 @@ class FakeRepository implements WarrantyRepository {
   Future<List<ProductCategory>> categories() async => defaultCategories;
 
   @override
-  Future<List<Product>> products({String category = '', String status = '', String query = ''}) async => items
-      .where((p) => category.isEmpty || p.category == category)
-      .where((p) => query.isEmpty || p.name.toLowerCase().contains(query.toLowerCase()))
+  Future<List<Product>> products(
+          {String category = '',
+          String status = '',
+          String query = ''}) async =>
+      items
+          .where((p) => category.isEmpty || p.category == category)
+          .where((p) =>
+              query.isEmpty ||
+              p.name.toLowerCase().contains(query.toLowerCase()))
+          .toList();
+
+  @override
+  Future<List<Product>> expiring({int days = 90}) async => items
+      .where(
+          (p) => p.daysLeft != null && p.daysLeft! >= 0 && p.daysLeft! <= days)
       .toList();
 
   @override
-  Future<List<Product>> expiring({int days = 90}) async =>
-      items.where((p) => p.daysLeft != null && p.daysLeft! >= 0 && p.daysLeft! <= days).toList();
-
-  @override
-  Future<Product> product(String id) async => items.firstWhere((p) => p.id == id);
+  Future<Product> product(String id) async =>
+      items.firstWhere((p) => p.id == id);
 
   @override
   Future<Product> createProduct(ProductDraft draft) async {
@@ -95,23 +108,40 @@ class FakeRepository implements WarrantyRepository {
   }
 
   @override
-  Future<Product> updateProduct(String id, ProductDraft draft) async => product(id);
+  Future<Product> updateProduct(String id, ProductDraft draft) async =>
+      product(id);
 
   @override
-  Future<void> deleteProduct(String id) async => items = items.where((p) => p.id != id).toList();
+  Future<void> deleteProduct(String id) async =>
+      items = items.where((p) => p.id != id).toList();
 
   @override
-  Future<ExtractionResult> extract({Uint8List? image, String imageName = 'fis.jpg', String text = ''}) async =>
-      extraction ?? ExtractionResult.fromJson(const {'fields': <String, dynamic>{}, 'provider': 'none', 'missing': <String>[]});
+  Future<ExtractionResult> extract(
+          {Uint8List? image,
+          String imageName = 'fis.jpg',
+          String text = ''}) async =>
+      extraction ??
+      ExtractionResult.fromJson(const {
+        'fields': <String, dynamic>{},
+        'provider': 'none',
+        'missing': <String>[]
+      });
 
   @override
-  Future<List<ProductDocument>> documents(String productId, {String type = ''}) async => const [];
+  Future<List<ProductDocument>> documents(String productId,
+          {String type = ''}) async =>
+      const [];
 
   @override
-  Future<ProductDocument> uploadDocument(String productId, String type, Uint8List bytes, String filename,
+  Future<ProductDocument> uploadDocument(
+      String productId, String type, Uint8List bytes, String filename,
       {String serviceRecordId = ''}) async {
     uploads.add('$productId/$type/$filename');
-    return ProductDocument(id: 'd1', type: type, contentType: 'image/jpeg', originalName: filename);
+    return ProductDocument(
+        id: 'd1',
+        type: type,
+        contentType: 'image/jpeg',
+        originalName: filename);
   }
 
   @override
@@ -127,7 +157,8 @@ class FakeRepository implements WarrantyRepository {
   Future<Map<String, String>> authHeaders() async => const {};
 
   @override
-  Future<ServiceRecord> createServiceRecord(String productId, ProblemType problem, String description) async =>
+  Future<ServiceRecord> createServiceRecord(
+          String productId, ProblemType problem, String description) async =>
       ServiceRecord(
         id: 's1',
         productId: productId,
@@ -141,18 +172,29 @@ class FakeRepository implements WarrantyRepository {
       );
 
   @override
-  Future<List<ServiceRecord>> serviceRecords({String productId = ''}) async => const [];
+  Future<List<ServiceRecord>> serviceRecords({String productId = ''}) async =>
+      const [];
 
   @override
   Future<ServiceRecord> updateServiceRecord(String id,
-          {ServiceStatus? status, String? serviceName, DateTime? serviceDate, String? notes}) async =>
-      ServiceRecord(id: id, productId: 'p1', problem: ProblemType.other, status: status ?? ServiceStatus.open);
+          {ServiceStatus? status,
+          String? serviceName,
+          DateTime? serviceDate,
+          String? notes}) async =>
+      ServiceRecord(
+          id: id,
+          productId: 'p1',
+          problem: ProblemType.other,
+          status: status ?? ServiceStatus.open);
 
   @override
-  Future<ChecklistResult> checklist(String productId) async => const ChecklistResult(true, [], 10);
+  Future<ChecklistResult> checklist(String productId) async =>
+      const ChecklistResult(true, [], 10);
 
   @override
-  Future<Uint8List> servicePack(String productId, {String serviceRecordId = ''}) async => Uint8List(4);
+  Future<Uint8List> servicePack(String productId,
+          {String serviceRecordId = ''}) async =>
+      Uint8List(4);
 
   @override
   Future<Dashboard> dashboard() async => Dashboard(
@@ -162,7 +204,10 @@ class FakeRepository implements WarrantyRepository {
         expiringSoon: 1,
         expired: 0,
         totalSpent: const {'TRY': 21498.9},
-        byCategory: const [CategoryStat('monitor', 'Monitör', 1, 12499), CategoryStat('headphones', 'Kulaklık', 1, 8999.9)],
+        byCategory: const [
+          CategoryStat('monitor', 'Monitör', 1, 12499),
+          CategoryStat('headphones', 'Kulaklık', 1, 8999.9)
+        ],
         upcoming: [headphones],
       );
 }

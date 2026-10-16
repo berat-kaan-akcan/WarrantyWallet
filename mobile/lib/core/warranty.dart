@@ -35,7 +35,8 @@ DateTime dateOnly(DateTime d) => DateTime.utc(d.year, d.month, d.day);
 /// (31 Jan + 1 month = 28/29 Feb).
 DateTime addMonths(DateTime date, int months) {
   final total = date.month - 1 + months;
-  final year = date.year + (total ~/ 12) - (total < 0 && total % 12 != 0 ? 1 : 0);
+  final year =
+      date.year + (total ~/ 12) - (total < 0 && total % 12 != 0 ? 1 : 0);
   final month = total % 12 + 1;
   final lastDay = DateTime.utc(year, month + 1, 0).day;
   final day = date.day > lastDay ? lastDay : date.day;

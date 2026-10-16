@@ -15,17 +15,11 @@ test/                          → birim + widget testleri (FakeRepository ile, 
 ```
 
 ## Platform klasörleri
-`android/` ve `ios/` klasörleri repoda tutulmuyor (Flutter sürümüne göre üretilir). İlk kurulumda:
-```bash
-cd mobile
-flutter create --org com.warrantywallet --project-name warranty_wallet --platforms=android,ios .
-flutter pub get
-```
-Sonra şunları ekleyin:
-- **Android** `android/app/src/main/AndroidManifest.xml`: `CAMERA`, `POST_NOTIFICATIONS`,
-  `RECEIVE_BOOT_COMPLETED` izinleri; geliştirmede HTTP backend için `android:usesCleartextTraffic="true"`.
-  `minSdkVersion` en az 21 (ML Kit).
-- **iOS** `ios/Runner/Info.plist`: `NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription`.
+`android/` ve `ios/` klasörleri repodadır (Flutter 3.47.7 ile üretildi). Eklenen ayarlar:
+- **Android** `AndroidManifest.xml`: `INTERNET`, `CAMERA`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`,
+  `SCHEDULE_EXACT_ALARM` izinleri; geliştirmede HTTP backend için `android:usesCleartextTraffic="true"`.
+  `build.gradle.kts`: `flutter_local_notifications` için core library desugaring.
+- **iOS** `Info.plist`: `NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription`.
 
 ## Çalıştırma
 ```bash

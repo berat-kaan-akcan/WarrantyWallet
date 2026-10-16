@@ -34,7 +34,8 @@ class _MainShellState extends ConsumerState<MainShell> {
           ? FloatingActionButton.extended(
               key: const Key('add_product'),
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const AddProductScreen()),
+                MaterialPageRoute<void>(
+                    builder: (_) => const AddProductScreen()),
               ),
               icon: const Icon(Icons.add_a_photo),
               label: const Text('Ürün Ekle'),
@@ -44,14 +45,23 @@ class _MainShellState extends ConsumerState<MainShell> {
         selectedIndex: _index,
         onDestinationSelected: _goTo,
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Ana Sayfa'),
+          NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home),
+              label: 'Ana Sayfa'),
           NavigationDestination(
             icon: Icon(Icons.inventory_2_outlined),
             selectedIcon: Icon(Icons.inventory_2),
             label: 'Ürünler',
           ),
-          NavigationDestination(icon: Icon(Icons.build_outlined), selectedIcon: Icon(Icons.build), label: 'Servis'),
-          NavigationDestination(icon: Icon(Icons.insights_outlined), selectedIcon: Icon(Icons.insights), label: 'Özet'),
+          NavigationDestination(
+              icon: Icon(Icons.build_outlined),
+              selectedIcon: Icon(Icons.build),
+              label: 'Servis'),
+          NavigationDestination(
+              icon: Icon(Icons.insights_outlined),
+              selectedIcon: Icon(Icons.insights),
+              label: 'Özet'),
         ],
       ),
     );

@@ -8,21 +8,24 @@ import '../services/services.dart';
 /// Overridden in main() and in tests.
 final tokenStoreProvider = Provider<TokenStore>((ref) => SecureTokenStore());
 final ocrServiceProvider = Provider<OcrService>((ref) => MlKitOcrService());
-final reminderSchedulerProvider = Provider<ReminderScheduler>((ref) => LocalReminderScheduler());
+final reminderSchedulerProvider =
+    Provider<ReminderScheduler>((ref) => LocalReminderScheduler());
 
 final repositoryProvider = Provider<WarrantyRepository>((ref) {
   final tokens = ref.watch(tokenStoreProvider);
   final api = ApiClient(
     baseUrl: apiBaseUrl,
     tokenProvider: tokens.read,
-    onUnauthorized: () => ref.read(authControllerProvider.notifier).sessionExpired(),
+    onUnauthorized: () =>
+        ref.read(authControllerProvider.notifier).sessionExpired(),
   );
   return ApiWarrantyRepository(api);
 });
 
 /// Authentication state.
 class AuthState {
-  const AuthState({this.user, this.loading = false, this.error, this.initialized = false});
+  const AuthState(
+      {this.user, this.loading = false, this.error, this.initialized = false});
 
   final AppUser? user;
   final bool loading;
@@ -31,7 +34,12 @@ class AuthState {
 
   bool get isLoggedIn => user != null;
 
-  AuthState copyWith({AppUser? user, bool? loading, String? error, bool? initialized, bool clearUser = false}) =>
+  AuthState copyWith(
+          {AppUser? user,
+          bool? loading,
+          String? error,
+          bool? initialized,
+          bool clearUser = false}) =>
       AuthState(
         user: clearUser ? null : (user ?? this.user),
         loading: loading ?? this.loading,
@@ -63,7 +71,8 @@ class AuthController extends StateNotifier<AuthState> {
     } on ApiException catch (e) {
       if (e.isUnauthorized) await _tokens.clear();
       if (!mounted) return;
-      state = AuthState(initialized: true, error: e.isNetwork ? e.userMessage : null);
+      state = AuthState(
+          initialized: true, error: e.isNetwork ? e.userMessage : null);
     }
   }
 
@@ -96,13 +105,15 @@ class AuthController extends StateNotifier<AuthState> {
   void sessionExpired() {
     if (state.isLoggedIn) {
       _tokens.clear().ignore();
-      state = const AuthState(initialized: true, error: 'Oturumunuzun süresi doldu. Lütfen tekrar giriş yapın.');
+      state = const AuthState(
+          initialized: true,
+          error: 'Oturumunuzun süresi doldu. Lütfen tekrar giriş yapın.');
     }
   }
 }
 
-final authControllerProvider =
-    StateNotifierProvider<AuthController, AuthState>((ref) => AuthController(ref));
+final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
+    (ref) => AuthController(ref));
 
 /// Product list filter on the products tab.
 class ProductQuery {
@@ -114,7 +125,10 @@ class ProductQuery {
 
   @override
   bool operator ==(Object other) =>
-      other is ProductQuery && other.category == category && other.status == status && other.text == text;
+      other is ProductQuery &&
+      other.category == category &&
+      other.status == status &&
+      other.text == text;
 
   @override
   int get hashCode => Object.hash(category, status, text);
@@ -129,9 +143,11 @@ final categoriesProvider = FutureProvider<List<ProductCategory>>((ref) async {
   }
 });
 
-final productsProvider = FutureProvider.family<List<Product>, ProductQuery>((ref, q) async {
-  final products =
-      await ref.watch(repositoryProvider).products(category: q.category, status: q.status, query: q.text);
+final productsProvider =
+    FutureProvider.family<List<Product>, ProductQuery>((ref, q) async {
+  final products = await ref
+      .watch(repositoryProvider)
+      .products(category: q.category, status: q.status, query: q.text);
   if (q == const ProductQuery()) {
     // full list → keep device reminders in sync
     await ref.read(reminderSchedulerProvider).syncAll(products);
@@ -139,19 +155,23 @@ final productsProvider = FutureProvider.family<List<Product>, ProductQuery>((ref
   return products;
 });
 
-final expiringProvider = FutureProvider<List<Product>>((ref) => ref.watch(repositoryProvider).expiring(days: 90));
+final expiringProvider = FutureProvider<List<Product>>(
+    (ref) => ref.watch(repositoryProvider).expiring(days: 90));
 
-final dashboardProvider = FutureProvider<Dashboard>((ref) => ref.watch(repositoryProvider).dashboard());
+final dashboardProvider = FutureProvider<Dashboard>(
+    (ref) => ref.watch(repositoryProvider).dashboard());
 
-final productProvider = FutureProvider.family<Product, String>((ref, id) => ref.watch(repositoryProvider).product(id));
+final productProvider = FutureProvider.family<Product, String>(
+    (ref, id) => ref.watch(repositoryProvider).product(id));
 
-final documentsProvider =
-    FutureProvider.family<List<ProductDocument>, String>((ref, id) => ref.watch(repositoryProvider).documents(id));
+final documentsProvider = FutureProvider.family<List<ProductDocument>, String>(
+    (ref, id) => ref.watch(repositoryProvider).documents(id));
 
-final serviceHistoryProvider =
-    FutureProvider<List<ServiceRecord>>((ref) => ref.watch(repositoryProvider).serviceRecords());
+final serviceHistoryProvider = FutureProvider<List<ServiceRecord>>(
+    (ref) => ref.watch(repositoryProvider).serviceRecords());
 
-final productServiceRecordsProvider = FutureProvider.family<List<ServiceRecord>, String>(
+final productServiceRecordsProvider =
+    FutureProvider.family<List<ServiceRecord>, String>(
   (ref, id) => ref.watch(repositoryProvider).serviceRecords(productId: id),
 );
 

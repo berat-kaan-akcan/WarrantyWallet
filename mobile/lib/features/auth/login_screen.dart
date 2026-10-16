@@ -30,7 +30,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   static String? validateEmail(String? v) {
     final s = (v ?? '').trim();
     if (s.isEmpty) return 'E-posta gerekli';
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(s)) return 'Geçerli bir e-posta girin';
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(s)) {
+      return 'Geçerli bir e-posta girin';
+    }
     return null;
   }
 
@@ -66,9 +68,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Icon(Icons.shield_outlined, size: 64, color: theme.colorScheme.primary),
+                      Icon(Icons.shield_outlined,
+                          size: 64, color: theme.colorScheme.primary),
                       const SizedBox(height: 12),
-                      Text('Warranty Wallet', textAlign: TextAlign.center, style: theme.textTheme.headlineMedium),
+                      Text('Warranty Wallet',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.headlineMedium),
                       const SizedBox(height: 4),
                       Text(
                         'Satın aldığın ürünleri unutma, garanti haklarını kaybetme.',
@@ -80,7 +85,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         TextFormField(
                           key: const Key('name'),
                           controller: _name,
-                          decoration: const InputDecoration(labelText: 'Ad Soyad', border: OutlineInputBorder()),
+                          decoration: const InputDecoration(
+                              labelText: 'Ad Soyad',
+                              border: OutlineInputBorder()),
                           textInputAction: TextInputAction.next,
                           autofillHints: const [AutofillHints.name],
                         ),
@@ -89,7 +96,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       TextFormField(
                         key: const Key('email'),
                         controller: _email,
-                        decoration: const InputDecoration(labelText: 'E-posta', border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                            labelText: 'E-posta', border: OutlineInputBorder()),
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
                         autofillHints: const [AutofillHints.email],
@@ -104,12 +112,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           labelText: 'Şifre',
                           border: const OutlineInputBorder(),
                           suffixIcon: IconButton(
-                            tooltip: _obscure ? 'Şifreyi göster' : 'Şifreyi gizle',
-                            icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
-                            onPressed: () => setState(() => _obscure = !_obscure),
+                            tooltip:
+                                _obscure ? 'Şifreyi göster' : 'Şifreyi gizle',
+                            icon: Icon(_obscure
+                                ? Icons.visibility
+                                : Icons.visibility_off),
+                            onPressed: () =>
+                                setState(() => _obscure = !_obscure),
                           ),
                         ),
-                        autofillHints: [_registerMode ? AutofillHints.newPassword : AutofillHints.password],
+                        autofillHints: [
+                          _registerMode
+                              ? AutofillHints.newPassword
+                              : AutofillHints.password
+                        ],
                         validator: validatePassword,
                         onFieldSubmitted: (_) => _submit(),
                       ),
@@ -128,15 +144,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           child: state.loading
-                              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2))
                               : Text(_registerMode ? 'Kayıt ol' : 'Giriş yap'),
                         ),
                       ),
                       const SizedBox(height: 8),
                       TextButton(
                         key: const Key('toggle_mode'),
-                        onPressed: () => setState(() => _registerMode = !_registerMode),
-                        child: Text(_registerMode ? 'Zaten hesabım var — giriş yap' : 'Hesabın yok mu? Kayıt ol'),
+                        onPressed: () =>
+                            setState(() => _registerMode = !_registerMode),
+                        child: Text(_registerMode
+                            ? 'Zaten hesabım var — giriş yap'
+                            : 'Hesabın yok mu? Kayıt ol'),
                       ),
                     ],
                   ),

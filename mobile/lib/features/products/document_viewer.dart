@@ -20,7 +20,8 @@ Future<void> shareBytes(Uint8List bytes, String filename) async {
 
 /// Shows stored invoices / warranty cards. Images are zoomable; PDFs can be shared.
 class DocumentViewer extends ConsumerWidget {
-  const DocumentViewer({super.key, required this.documents, required this.title});
+  const DocumentViewer(
+      {super.key, required this.documents, required this.title});
 
   final List<ProductDocument> documents;
   final String title;
@@ -33,10 +34,13 @@ class DocumentViewer extends ConsumerWidget {
         appBar: AppBar(
           title: Text(title),
           bottom: documents.length > 1
-              ? TabBar(isScrollable: true, tabs: [for (final d in documents) Tab(text: d.originalName)])
+              ? TabBar(
+                  isScrollable: true,
+                  tabs: [for (final d in documents) Tab(text: d.originalName)])
               : null,
         ),
-        body: TabBarView(children: [for (final d in documents) _DocumentPage(doc: d)]),
+        body: TabBarView(
+            children: [for (final d in documents) _DocumentPage(doc: d)]),
       ),
     );
   }
@@ -52,11 +56,13 @@ class _DocumentPage extends ConsumerStatefulWidget {
 }
 
 class _DocumentPageState extends ConsumerState<_DocumentPage> {
-  late final Future<Uint8List> _bytes = ref.read(repositoryProvider).documentBytes(widget.doc.id);
+  late final Future<Uint8List> _bytes =
+      ref.read(repositoryProvider).documentBytes(widget.doc.id);
 
   Future<void> _share(Uint8List data) async {
     try {
-      await shareBytes(data, widget.doc.originalName.isEmpty ? 'belge' : widget.doc.originalName);
+      await shareBytes(data,
+          widget.doc.originalName.isEmpty ? 'belge' : widget.doc.originalName);
     } on Exception {
       if (mounted) showSnack(context, 'Paylaşılamadı', error: true);
     }
@@ -68,9 +74,14 @@ class _DocumentPageState extends ConsumerState<_DocumentPage> {
       future: _bytes,
       builder: (context, snap) {
         if (snap.hasError) {
-          return EmptyState(icon: Icons.broken_image, title: 'Belge yüklenemedi', message: errorMessage(snap.error!));
+          return EmptyState(
+              icon: Icons.broken_image,
+              title: 'Belge yüklenemedi',
+              message: errorMessage(snap.error!));
         }
-        if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+        if (!snap.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
         final data = snap.data!;
         if (widget.doc.isImage && widget.doc.contentType != 'image/heic') {
           return Stack(
@@ -78,7 +89,9 @@ class _DocumentPageState extends ConsumerState<_DocumentPage> {
               Positioned.fill(
                 child: InteractiveViewer(
                   maxScale: 5,
-                  child: Image.memory(data, fit: BoxFit.contain, semanticLabel: widget.doc.originalName),
+                  child: Image.memory(data,
+                      fit: BoxFit.contain,
+                      semanticLabel: widget.doc.originalName),
                 ),
               ),
               Positioned(

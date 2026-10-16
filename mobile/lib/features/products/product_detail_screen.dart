@@ -24,10 +24,14 @@ class ProductDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final product = ref.watch(productProvider(productId));
     return product.when(
-      loading: () => Scaffold(appBar: AppBar(), body: const Center(child: CircularProgressIndicator())),
+      loading: () => Scaffold(
+          appBar: AppBar(),
+          body: const Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
         appBar: AppBar(),
-        body: ErrorState(error: e, onRetry: () => ref.invalidate(productProvider(productId))),
+        body: ErrorState(
+            error: e,
+            onRetry: () => ref.invalidate(productProvider(productId))),
       ),
       data: (p) => _ProductDetail(product: p),
     );
@@ -44,10 +48,15 @@ class _ProductDetail extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Ürünü sil'),
-        content: Text('"${product.name}" ve tüm belgeleri silinecek. Emin misiniz?'),
+        content:
+            Text('"${product.name}" ve tüm belgeleri silinecek. Emin misiniz?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Sil')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Vazgeç')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Sil')),
         ],
       ),
     );
@@ -73,11 +82,16 @@ class _ProductDetail extends ConsumerWidget {
             children: [
               ProductForm(
                 initial: ProductDraft.fromProduct(product),
-                categories: ref.read(categoriesProvider).valueOrNull ?? defaultCategories,
+                categories: ref.read(categoriesProvider).valueOrNull ??
+                    defaultCategories,
                 onSubmit: (draft) async {
                   try {
-                    final updated = await ref.read(repositoryProvider).updateProduct(product.id, draft);
-                    await ref.read(reminderSchedulerProvider).syncProduct(updated);
+                    final updated = await ref
+                        .read(repositoryProvider)
+                        .updateProduct(product.id, draft);
+                    await ref
+                        .read(reminderSchedulerProvider)
+                        .syncProduct(updated);
                     refreshProducts(ref, product.id);
                     if (ctx.mounted) Navigator.of(ctx).pop();
                   } on ApiException catch (e) {
@@ -92,7 +106,8 @@ class _ProductDetail extends ConsumerWidget {
     );
   }
 
-  Future<void> _openDocument(BuildContext context, WidgetRef ref, String type, String label) async {
+  Future<void> _openDocument(
+      BuildContext context, WidgetRef ref, String type, String label) async {
     final docs = await ref.read(documentsProvider(product.id).future);
     if (!context.mounted) return;
     final matching = docs.where((d) => d.type == type).toList();
@@ -101,26 +116,37 @@ class _ProductDetail extends ConsumerWidget {
         context: context,
         builder: (ctx) => AlertDialog(
           title: Text('$label yok'),
-          content: Text('Bu ürün için kayıtlı $label bulunmuyor. Şimdi fotoğrafını eklemek ister misiniz?'),
+          content: Text(
+              'Bu ürün için kayıtlı $label bulunmuyor. Şimdi fotoğrafını eklemek ister misiniz?'),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Ekle')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Vazgeç')),
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Ekle')),
           ],
         ),
       );
-      if (add == true && context.mounted) await _addDocument(context, ref, type);
+      if (add == true && context.mounted) {
+        await _addDocument(context, ref, type);
+      }
       return;
     }
     await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => DocumentViewer(documents: matching, title: label)),
+      MaterialPageRoute<void>(
+          builder: (_) => DocumentViewer(documents: matching, title: label)),
     );
   }
 
-  Future<void> _addDocument(BuildContext context, WidgetRef ref, String type) async {
+  Future<void> _addDocument(
+      BuildContext context, WidgetRef ref, String type) async {
     final picked = await ref.read(imageSourceProvider).pick(camera: true);
     if (picked == null || !context.mounted) return;
     try {
-      await ref.read(repositoryProvider).uploadDocument(product.id, type, picked.bytes, picked.name);
+      await ref
+          .read(repositoryProvider)
+          .uploadDocument(product.id, type, picked.bytes, picked.name);
       ref.invalidate(documentsProvider(product.id));
       if (context.mounted) showSnack(context, 'Belge kaydedildi');
     } on ApiException catch (e) {
@@ -136,9 +162,13 @@ class _ProductDetail extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const ListTile(title: Text('Hatırlatıcılar'), subtitle: Text('Garanti bitiminden 90, 30 ve 7 gün önce')),
+            const ListTile(
+                title: Text('Hatırlatıcılar'),
+                subtitle: Text('Garanti bitiminden 90, 30 ve 7 gün önce')),
             if (planned.isEmpty)
-              const ListTile(leading: Icon(Icons.notifications_off), title: Text('Planlanmış hatırlatıcı yok')),
+              const ListTile(
+                  leading: Icon(Icons.notifications_off),
+                  title: Text('Planlanmış hatırlatıcı yok')),
             for (final r in planned)
               ListTile(
                 leading: const Icon(Icons.notifications_active),
@@ -164,10 +194,12 @@ class _ProductDetail extends ConsumerWidget {
             children: [
               Text('Yetkili Servis', style: Theme.of(ctx).textTheme.titleLarge),
               const SizedBox(height: 12),
-              Text('$brand yetkili servislerini üreticinin resmi sitesinden veya "$brand yetkili servis" '
+              Text(
+                  '$brand yetkili servislerini üreticinin resmi sitesinden veya "$brand yetkili servis" '
                   'aramasıyla bulabilirsiniz. Servise giderken "Servis Kaydı Oluştur" ile belge paketinizi hazırlayın.'),
               const SizedBox(height: 8),
-              const Text('Harita üzerinde yakındaki servisleri bulma özelliği V2 yol haritasında.'),
+              const Text(
+                  'Harita üzerinde yakındaki servisleri bulma özelliği V2 yol haritasında.'),
             ],
           ),
         ),
@@ -206,14 +238,17 @@ class _ProductDetail extends ConsumerWidget {
           children: [
             Row(
               children: [
-                CircleAvatar(radius: 28, child: Icon(categoryIcon(p.category), size: 28)),
+                CircleAvatar(
+                    radius: 28,
+                    child: Icon(categoryIcon(p.category), size: 28)),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(p.name, style: theme.textTheme.titleLarge),
-                      Text(categoryName(p.category), style: theme.textTheme.bodyMedium),
+                      Text(categoryName(p.category),
+                          style: theme.textTheme.bodyMedium),
                     ],
                   ),
                 ),
@@ -226,16 +261,28 @@ class _ProductDetail extends ConsumerWidget {
                 child: DaysLeftText(p.daysLeft, p.status),
               ),
             const Divider(height: 32),
-            InfoRow('Satın alma tarihi', formatDate(p.purchaseDate), icon: Icons.calendar_today),
-            InfoRow('Satıcı', p.seller.isEmpty ? '-' : p.seller, icon: Icons.storefront),
-            InfoRow('Fiyat', formatMoney(p.price, p.currency), icon: Icons.payments_outlined),
-            InfoRow('Garanti süresi', p.warrantyMonths == 0 ? 'Yok' : '${p.warrantyMonths} ay', icon: Icons.timelapse),
-            InfoRow('Bitiş tarihi', formatDate(p.warrantyEnd), icon: Icons.event),
-            InfoRow('Durum', statusStyle(p.status).label, icon: statusStyle(p.status).icon),
-            InfoRow('Seri numarası', p.serialNumber.isEmpty ? '-' : p.serialNumber, icon: Icons.qr_code),
+            InfoRow('Satın alma tarihi', formatDate(p.purchaseDate),
+                icon: Icons.calendar_today),
+            InfoRow('Satıcı', p.seller.isEmpty ? '-' : p.seller,
+                icon: Icons.storefront),
+            InfoRow('Fiyat', formatMoney(p.price, p.currency),
+                icon: Icons.payments_outlined),
+            InfoRow('Garanti süresi',
+                p.warrantyMonths == 0 ? 'Yok' : '${p.warrantyMonths} ay',
+                icon: Icons.timelapse),
+            InfoRow('Bitiş tarihi', formatDate(p.warrantyEnd),
+                icon: Icons.event),
+            InfoRow('Durum', statusStyle(p.status).label,
+                icon: statusStyle(p.status).icon),
+            InfoRow(
+                'Seri numarası', p.serialNumber.isEmpty ? '-' : p.serialNumber,
+                icon: Icons.qr_code),
             if (p.brand.isNotEmpty || p.model.isNotEmpty)
-              InfoRow('Marka / Model', [p.brand, p.model].where((s) => s.isNotEmpty).join(' / '), icon: Icons.label),
-            if (p.notes.isNotEmpty) InfoRow('Notlar', p.notes, icon: Icons.notes),
+              InfoRow('Marka / Model',
+                  [p.brand, p.model].where((s) => s.isNotEmpty).join(' / '),
+                  icon: Icons.label),
+            if (p.notes.isNotEmpty)
+              InfoRow('Notlar', p.notes, icon: Icons.notes),
             const Divider(height: 32),
             _ActionTile(
               icon: Icons.receipt_long,
@@ -245,7 +292,8 @@ class _ProductDetail extends ConsumerWidget {
             _ActionTile(
               icon: Icons.verified,
               title: 'Garanti Belgesini Gör',
-              onTap: () => _openDocument(context, ref, 'warranty', 'Garanti belgesi'),
+              onTap: () =>
+                  _openDocument(context, ref, 'warranty', 'Garanti belgesi'),
             ),
             _ActionTile(
               icon: Icons.add_photo_alternate,
@@ -256,12 +304,17 @@ class _ProductDetail extends ConsumerWidget {
             _ActionTile(
               icon: Icons.build_circle,
               title: 'Servis Kaydı Oluştur',
-              subtitle: p.isCovered ? 'Ürünüm arızalandı' : 'Garanti süresi dolmuş',
+              subtitle:
+                  p.isCovered ? 'Ürünüm arızalandı' : 'Garanti süresi dolmuş',
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => ReportIssueScreen(product: p)),
+                MaterialPageRoute<void>(
+                    builder: (_) => ReportIssueScreen(product: p)),
               ),
             ),
-            _ActionTile(icon: Icons.home_repair_service, title: 'Yetkili Servis', onTap: () => _showAuthorizedService(context)),
+            _ActionTile(
+                icon: Icons.home_repair_service,
+                title: 'Yetkili Servis',
+                onTap: () => _showAuthorizedService(context)),
             _ActionTile(
               icon: Icons.notifications,
               title: 'Hatırlatıcılar',
@@ -272,7 +325,9 @@ class _ProductDetail extends ConsumerWidget {
             Text('Servis geçmişi', style: theme.textTheme.titleMedium),
             services.when(
               data: (items) => items.isEmpty
-                  ? const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('Servis kaydı yok.'))
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Text('Servis kaydı yok.'))
                   : Column(
                       children: [
                         for (final s in items)
@@ -280,7 +335,8 @@ class _ProductDetail extends ConsumerWidget {
                             contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.history),
                             title: Text(s.problem.label),
-                            subtitle: Text('${s.status.label} • ${formatDate(s.createdAt)}'),
+                            subtitle: Text(
+                                '${s.status.label} • ${formatDate(s.createdAt)}'),
                           ),
                       ],
                     ),
@@ -325,7 +381,11 @@ class _ProductDetail extends ConsumerWidget {
 }
 
 class _ActionTile extends StatelessWidget {
-  const _ActionTile({required this.icon, required this.title, required this.onTap, this.subtitle});
+  const _ActionTile(
+      {required this.icon,
+      required this.title,
+      required this.onTap,
+      this.subtitle});
 
   final IconData icon;
   final String title;
@@ -344,4 +404,3 @@ class _ActionTile extends StatelessWidget {
     );
   }
 }
-

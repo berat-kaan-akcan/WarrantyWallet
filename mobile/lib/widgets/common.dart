@@ -11,13 +11,29 @@ const brandColor = Color(0xFF1B5E9E);
 ({Color color, String label, IconData icon}) statusStyle(WarrantyStatus s) {
   switch (s) {
     case WarrantyStatus.active:
-      return (color: const Color(0xFF2E7D32), label: 'Aktif', icon: Icons.verified_user);
+      return (
+        color: const Color(0xFF2E7D32),
+        label: 'Aktif',
+        icon: Icons.verified_user
+      );
     case WarrantyStatus.expiringSoon:
-      return (color: const Color(0xFFB26A00), label: 'Yakında bitiyor', icon: Icons.schedule);
+      return (
+        color: const Color(0xFFB26A00),
+        label: 'Yakında bitiyor',
+        icon: Icons.schedule
+      );
     case WarrantyStatus.expired:
-      return (color: const Color(0xFFC62828), label: 'Bitti', icon: Icons.gpp_bad);
+      return (
+        color: const Color(0xFFC62828),
+        label: 'Bitti',
+        icon: Icons.gpp_bad
+      );
     case WarrantyStatus.unknown:
-      return (color: Colors.grey, label: 'Bilinmiyor', icon: Icons.help_outline);
+      return (
+        color: Colors.grey,
+        label: 'Bilinmiyor',
+        icon: Icons.help_outline
+      );
   }
 }
 
@@ -44,7 +60,8 @@ class StatusChip extends StatelessWidget {
           children: [
             Icon(st.icon, size: 16, color: st.color),
             const SizedBox(width: 4),
-            Text(st.label, style: TextStyle(color: st.color, fontWeight: FontWeight.w600)),
+            Text(st.label,
+                style: TextStyle(color: st.color, fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -64,7 +81,8 @@ class DaysLeftText extends StatelessWidget {
     if (days == null) return const Text('-');
     return Text(
       formatDaysLeft(days!),
-      style: TextStyle(color: statusStyle(status).color, fontWeight: FontWeight.w600),
+      style: TextStyle(
+          color: statusStyle(status).color, fontWeight: FontWeight.w600),
     );
   }
 }
@@ -101,7 +119,12 @@ IconData categoryIcon(String slug) {
 
 /// Empty state with an optional action.
 class EmptyState extends StatelessWidget {
-  const EmptyState({super.key, required this.icon, required this.title, this.message, this.action});
+  const EmptyState(
+      {super.key,
+      required this.icon,
+      required this.title,
+      this.message,
+      this.action});
 
   final IconData icon;
   final String title;
@@ -119,10 +142,14 @@ class EmptyState extends StatelessWidget {
           children: [
             Icon(icon, size: 56, color: theme.colorScheme.outline),
             const SizedBox(height: 12),
-            Text(title, style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
+            Text(title,
+                style: theme.textTheme.titleMedium,
+                textAlign: TextAlign.center),
             if (message != null) ...[
               const SizedBox(height: 6),
-              Text(message!, style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+              Text(message!,
+                  style: theme.textTheme.bodyMedium,
+                  textAlign: TextAlign.center),
             ],
             if (action != null) ...[const SizedBox(height: 16), action!],
           ],
@@ -141,12 +168,17 @@ class ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final msg = error is ApiException ? (error as ApiException).userMessage : 'Beklenmeyen bir hata oluştu.';
+    final msg = error is ApiException
+        ? (error as ApiException).userMessage
+        : 'Beklenmeyen bir hata oluştu.';
     return EmptyState(
       icon: Icons.cloud_off,
       title: 'Bir sorun oluştu',
       message: msg,
-      action: OutlinedButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Tekrar dene')),
+      action: OutlinedButton.icon(
+          onPressed: onRetry,
+          icon: const Icon(Icons.refresh),
+          label: const Text('Tekrar dene')),
     );
   }
 }
@@ -162,7 +194,8 @@ void showSnack(BuildContext context, String message, {bool error = false}) {
 }
 
 /// User-facing message for any error.
-String errorMessage(Object e) => e is ApiException ? e.userMessage : 'Beklenmeyen bir hata oluştu.';
+String errorMessage(Object e) =>
+    e is ApiException ? e.userMessage : 'Beklenmeyen bir hata oluştu.';
 
 /// Labelled value row on the detail screen.
 class InfoRow extends StatelessWidget {
@@ -181,11 +214,17 @@ class InfoRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (icon != null) ...[Icon(icon, size: 20, color: theme.colorScheme.primary), const SizedBox(width: 12)],
-            Expanded(flex: 2, child: Text(label, style: theme.textTheme.bodyMedium)),
+            if (icon != null) ...[
+              Icon(icon, size: 20, color: theme.colorScheme.primary),
+              const SizedBox(width: 12)
+            ],
+            Expanded(
+                flex: 2, child: Text(label, style: theme.textTheme.bodyMedium)),
             Expanded(
               flex: 3,
-              child: Text(value, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+              child: Text(value,
+                  style: theme.textTheme.bodyLarge
+                      ?.copyWith(fontWeight: FontWeight.w600)),
             ),
           ],
         ),

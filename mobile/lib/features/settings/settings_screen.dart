@@ -14,10 +14,15 @@ class SettingsScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Hesabı sil'),
-        content: const Text('Hesabınız, tüm ürünleriniz ve belgeleriniz kalıcı olarak silinecek. Bu işlem geri alınamaz.'),
+        content: const Text(
+            'Hesabınız, tüm ürünleriniz ve belgeleriniz kalıcı olarak silinecek. Bu işlem geri alınamaz.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hesabı sil')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Vazgeç')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Hesabı sil')),
         ],
       ),
     );
@@ -67,8 +72,10 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
           ListTile(
-            leading: Icon(Icons.delete_forever, color: Theme.of(context).colorScheme.error),
-            title: Text('Hesabı sil', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            leading: Icon(Icons.delete_forever,
+                color: Theme.of(context).colorScheme.error),
+            title: Text('Hesabı sil',
+                style: TextStyle(color: Theme.of(context).colorScheme.error)),
             onTap: () => _deleteAccount(context, ref),
           ),
         ],

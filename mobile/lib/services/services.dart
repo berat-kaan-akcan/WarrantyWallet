@@ -18,7 +18,8 @@ abstract class TokenStore {
 
 /// Keychain/Keystore backed token storage.
 class SecureTokenStore implements TokenStore {
-  SecureTokenStore([FlutterSecureStorage? storage]) : _storage = storage ?? const FlutterSecureStorage();
+  SecureTokenStore([FlutterSecureStorage? storage])
+      : _storage = storage ?? const FlutterSecureStorage();
 
   static const _key = 'auth_token';
   final FlutterSecureStorage _storage;
@@ -66,7 +67,8 @@ class MlKitOcrService implements OcrService {
   Future<String> recognize(String imagePath) async {
     final recognizer = TextRecognizer(script: TextRecognitionScript.latin);
     try {
-      final result = await recognizer.processImage(InputImage.fromFilePath(imagePath));
+      final result =
+          await recognizer.processImage(InputImage.fromFilePath(imagePath));
       return result.text;
     } on Exception catch (e) {
       debugPrint('OCR failed: $e');
@@ -110,7 +112,9 @@ const _possessive = {
 /// "ASUS monitörünüzün garantisinin bitmesine 30 gün kaldı." (same text as the backend).
 String reminderMessage(Product p, int days) {
   final form = _possessive[p.category];
-  final subject = form != null && p.brand.isNotEmpty ? '${p.brand} $form' : '${p.name} ürününüzün';
+  final subject = form != null && p.brand.isNotEmpty
+      ? '${p.brand} $form'
+      : '${p.name} ürününüzün';
   return '$subject garantisinin bitmesine $days gün kaldı.';
 }
 
@@ -133,7 +137,8 @@ List<PlannedReminder> planReminders(Product p, DateTime now) {
     final day = end.subtract(Duration(days: days));
     final at = DateTime(day.year, day.month, day.day, 10);
     if (!at.isAfter(now)) continue;
-    out.add(PlannedReminder(reminderId(p.id, days), at, 'Garanti hatırlatıcı', reminderMessage(p, days)));
+    out.add(PlannedReminder(reminderId(p.id, days), at, 'Garanti hatırlatıcı',
+        reminderMessage(p, days)));
   }
   return out;
 }
@@ -173,7 +178,8 @@ class LocalReminderScheduler implements ReminderScheduler {
     );
     await _plugin.initialize(settings);
     await _plugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
     _ready = true;
   }
@@ -190,7 +196,8 @@ class LocalReminderScheduler implements ReminderScheduler {
         tz.TZDateTime.from(r.at, tz.local),
         _details,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
         payload: p.id,
       );
     }
@@ -226,10 +233,12 @@ class FakeReminderScheduler implements ReminderScheduler {
   Future<void> syncProduct(Product p) async => synced.add(p.id);
 
   @override
-  Future<void> cancelProduct(String productId) async => cancelled.add(productId);
+  Future<void> cancelProduct(String productId) async =>
+      cancelled.add(productId);
 
   @override
-  Future<void> syncAll(List<Product> products) async => synced.addAll(products.map((p) => p.id));
+  Future<void> syncAll(List<Product> products) async =>
+      synced.addAll(products.map((p) => p.id));
 }
 
 /// Human description of the next reminder for the detail screen.

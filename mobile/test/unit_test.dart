@@ -7,13 +7,20 @@ import 'package:warranty_wallet/services/services.dart';
 void main() {
   group('warranty dates', () {
     test('adds months like the backend (end-of-month clamp, leap years)', () {
-      expect(warrantyEnd(DateTime.utc(2026, 9, 12), 24), DateTime.utc(2028, 9, 12));
-      expect(warrantyEnd(DateTime.utc(2026, 1, 31), 1), DateTime.utc(2026, 2, 28));
-      expect(warrantyEnd(DateTime.utc(2028, 1, 31), 1), DateTime.utc(2028, 2, 29));
-      expect(warrantyEnd(DateTime.utc(2024, 2, 29), 12), DateTime.utc(2025, 2, 28));
-      expect(warrantyEnd(DateTime.utc(2026, 12, 15), 1), DateTime.utc(2027, 1, 15));
-      expect(addMonths(DateTime.utc(2026, 3, 31), -1), DateTime.utc(2026, 2, 28));
-      expect(addMonths(DateTime.utc(2026, 1, 15), -2), DateTime.utc(2025, 11, 15));
+      expect(warrantyEnd(DateTime.utc(2026, 9, 12), 24),
+          DateTime.utc(2028, 9, 12));
+      expect(
+          warrantyEnd(DateTime.utc(2026, 1, 31), 1), DateTime.utc(2026, 2, 28));
+      expect(
+          warrantyEnd(DateTime.utc(2028, 1, 31), 1), DateTime.utc(2028, 2, 29));
+      expect(warrantyEnd(DateTime.utc(2024, 2, 29), 12),
+          DateTime.utc(2025, 2, 28));
+      expect(warrantyEnd(DateTime.utc(2026, 12, 15), 1),
+          DateTime.utc(2027, 1, 15));
+      expect(
+          addMonths(DateTime.utc(2026, 3, 31), -1), DateTime.utc(2026, 2, 28));
+      expect(
+          addMonths(DateTime.utc(2026, 1, 15), -2), DateTime.utc(2025, 11, 15));
       expect(warrantyEnd(null, 24), isNull);
       expect(warrantyEnd(DateTime.utc(2026, 1, 1), 0), isNull);
     });
@@ -21,12 +28,15 @@ void main() {
     test('status and days left', () {
       final end = DateTime.utc(2026, 12, 31);
       expect(statusOf(end, DateTime.utc(2026, 1, 1)), WarrantyStatus.active);
-      expect(statusOf(end, DateTime.utc(2026, 12, 1)), WarrantyStatus.expiringSoon);
-      expect(statusOf(end, DateTime.utc(2026, 12, 31)), WarrantyStatus.expiringSoon);
+      expect(statusOf(end, DateTime.utc(2026, 12, 1)),
+          WarrantyStatus.expiringSoon);
+      expect(statusOf(end, DateTime.utc(2026, 12, 31)),
+          WarrantyStatus.expiringSoon);
       expect(statusOf(end, DateTime.utc(2027, 1, 1)), WarrantyStatus.expired);
       expect(statusOf(null, DateTime.utc(2027, 1, 1)), WarrantyStatus.unknown);
       expect(daysLeft(end, DateTime.utc(2026, 12, 1)), 30);
-      expect(warrantyStatusFromApi('expiring_soon'), WarrantyStatus.expiringSoon);
+      expect(
+          warrantyStatusFromApi('expiring_soon'), WarrantyStatus.expiringSoon);
       expect(warrantyStatusFromApi('nonsense'), WarrantyStatus.unknown);
     });
   });
@@ -83,7 +93,10 @@ void main() {
     });
 
     test('draft json never sends warranty_end', () {
-      final d = ProductDraft(name: ' X ', purchaseDate: DateTime.utc(2026, 1, 31), warrantyMonths: 1);
+      final d = ProductDraft(
+          name: ' X ',
+          purchaseDate: DateTime.utc(2026, 1, 31),
+          warrantyMonths: 1);
       final j = d.toJson();
       expect(j['name'], 'X');
       expect(j['purchase_date'], '2026-01-31');
@@ -118,7 +131,12 @@ void main() {
         'expired': 1,
         'total_spent': {'TRY': 26598.95},
         'by_category': [
-          {'category': 'headphones', 'name': 'Kulaklık', 'count': 2, 'total': 9099.95},
+          {
+            'category': 'headphones',
+            'name': 'Kulaklık',
+            'count': 2,
+            'total': 9099.95
+          },
         ],
         'upcoming': <Map<String, dynamic>>[],
       });
@@ -141,9 +159,11 @@ void main() {
     );
 
     test('message matches the spec', () {
-      expect(reminderMessage(p, 30), 'ASUS monitörünüzün garantisinin bitmesine 30 gün kaldı.');
+      expect(reminderMessage(p, 30),
+          'ASUS monitörünüzün garantisinin bitmesine 30 gün kaldı.');
       final unknown = Product(id: 'x', name: 'Dedica EC685', category: 'other');
-      expect(reminderMessage(unknown, 7), 'Dedica EC685 ürününüzün garantisinin bitmesine 7 gün kaldı.');
+      expect(reminderMessage(unknown, 7),
+          'Dedica EC685 ürününüzün garantisinin bitmesine 7 gün kaldı.');
     });
 
     test('plans 90/30/7 at 10:00 and skips past ones', () {
@@ -153,7 +173,8 @@ void main() {
       expect(all.last.at, DateTime(2028, 9, 5, 10));
       final remaining = planReminders(p, DateTime(2028, 8, 20));
       expect(remaining.length, 1);
-      expect(planReminders(Product(id: 'x', name: 'n'), DateTime(2026)), isEmpty);
+      expect(
+          planReminders(Product(id: 'x', name: 'n'), DateTime(2026)), isEmpty);
     });
 
     test('reminder ids are stable and distinct', () {

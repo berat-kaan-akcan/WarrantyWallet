@@ -28,18 +28,21 @@ class ServiceHistoryScreen extends ConsumerWidget {
                     EmptyState(
                       icon: Icons.build_outlined,
                       title: 'Servis kaydı yok',
-                      message: 'Bir ürün arızalandığında ürün detayından "Servis Kaydı Oluştur"a dokunun.',
+                      message:
+                          'Bir ürün arızalandığında ürün detayından "Servis Kaydı Oluştur"a dokunun.',
                     ),
                   ],
                 )
               : ListView.separated(
                   itemCount: items.length,
                   separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, i) => ServiceRecordTile(record: items[i]),
+                  itemBuilder: (context, i) =>
+                      ServiceRecordTile(record: items[i]),
                 ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(serviceHistoryProvider)),
+        error: (e, _) => ErrorState(
+            error: e, onRetry: () => ref.invalidate(serviceHistoryProvider)),
       ),
     );
   }
@@ -80,7 +83,8 @@ class ServiceRecordTile extends ConsumerWidget {
         if (r.serviceName.isNotEmpty) r.serviceName,
         formatDate(r.serviceDate ?? r.createdAt),
       ].join(' • ')),
-      trailing: Text(r.status.label, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+      trailing: Text(r.status.label,
+          style: TextStyle(color: color, fontWeight: FontWeight.w600)),
       onTap: () => showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
@@ -102,7 +106,8 @@ class ServiceUpdateSheet extends ConsumerStatefulWidget {
 
 class _ServiceUpdateSheetState extends ConsumerState<ServiceUpdateSheet> {
   late ServiceStatus _status = widget.record.status;
-  late final _serviceName = TextEditingController(text: widget.record.serviceName);
+  late final _serviceName =
+      TextEditingController(text: widget.record.serviceName);
   late final _notes = TextEditingController(text: widget.record.notes);
   late DateTime? _date = widget.record.serviceDate;
   bool _saving = false;
@@ -147,7 +152,8 @@ class _ServiceUpdateSheetState extends ConsumerState<ServiceUpdateSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Servis kaydını güncelle', style: Theme.of(context).textTheme.titleLarge),
+              Text('Servis kaydını güncelle',
+                  style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -163,12 +169,15 @@ class _ServiceUpdateSheetState extends ConsumerState<ServiceUpdateSheet> {
               const SizedBox(height: 12),
               TextField(
                 controller: _serviceName,
-                decoration: const InputDecoration(labelText: 'Servis adı', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                    labelText: 'Servis adı', border: OutlineInputBorder()),
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 icon: const Icon(Icons.event),
-                label: Text(_date == null ? 'Servis tarihi seç' : 'Servis tarihi: ${formatDate(_date)}'),
+                label: Text(_date == null
+                    ? 'Servis tarihi seç'
+                    : 'Servis tarihi: ${formatDate(_date)}'),
                 onPressed: () async {
                   final now = DateTime.now();
                   final picked = await showDatePicker(
@@ -177,17 +186,23 @@ class _ServiceUpdateSheetState extends ConsumerState<ServiceUpdateSheet> {
                     firstDate: DateTime(2000),
                     lastDate: DateTime(now.year + 1),
                   );
-                  if (picked != null && mounted) setState(() => _date = DateTime.utc(picked.year, picked.month, picked.day));
+                  if (picked != null && mounted) {
+                    setState(() => _date =
+                        DateTime.utc(picked.year, picked.month, picked.day));
+                  }
                 },
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _notes,
                 maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Notlar', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                    labelText: 'Notlar', border: OutlineInputBorder()),
               ),
               const SizedBox(height: 16),
-              FilledButton(onPressed: _saving ? null : _save, child: const Text('Kaydet')),
+              FilledButton(
+                  onPressed: _saving ? null : _save,
+                  child: const Text('Kaydet')),
             ],
           ),
         ),

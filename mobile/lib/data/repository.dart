@@ -29,35 +29,45 @@ abstract class WarrantyRepository {
   Future<void> deleteAccount();
 
   Future<List<ProductCategory>> categories();
-  Future<List<Product>> products({String category = '', String status = '', String query = ''});
+  Future<List<Product>> products(
+      {String category = '', String status = '', String query = ''});
   Future<List<Product>> expiring({int days = 90});
   Future<Product> product(String id);
   Future<Product> createProduct(ProductDraft draft);
   Future<Product> updateProduct(String id, ProductDraft draft);
   Future<void> deleteProduct(String id);
 
-  Future<ExtractionResult> extract({Uint8List? image, String imageName = 'fis.jpg', String text = ''});
+  Future<ExtractionResult> extract(
+      {Uint8List? image, String imageName = 'fis.jpg', String text = ''});
 
   Future<List<ProductDocument>> documents(String productId, {String type = ''});
-  Future<ProductDocument> uploadDocument(String productId, String type, Uint8List bytes, String filename,
+  Future<ProductDocument> uploadDocument(
+      String productId, String type, Uint8List bytes, String filename,
       {String serviceRecordId = ''});
   Future<Uint8List> documentBytes(String documentId);
   Future<void> deleteDocument(String documentId);
   String documentUrl(String documentId);
   Future<Map<String, String>> authHeaders();
 
-  Future<ServiceRecord> createServiceRecord(String productId, ProblemType problem, String description);
+  Future<ServiceRecord> createServiceRecord(
+      String productId, ProblemType problem, String description);
   Future<List<ServiceRecord>> serviceRecords({String productId = ''});
   Future<ServiceRecord> updateServiceRecord(String id,
-      {ServiceStatus? status, String? serviceName, DateTime? serviceDate, String? notes});
+      {ServiceStatus? status,
+      String? serviceName,
+      DateTime? serviceDate,
+      String? notes});
   Future<ChecklistResult> checklist(String productId);
-  Future<Uint8List> servicePack(String productId, {String serviceRecordId = ''});
+  Future<Uint8List> servicePack(String productId,
+      {String serviceRecordId = ''});
 
   Future<Dashboard> dashboard();
 }
 
 List<Map<String, dynamic>> _items(Map<String, dynamic> body) =>
-    (body['items'] as List? ?? const []).whereType<Map<String, dynamic>>().toList();
+    (body['items'] as List? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .toList();
 
 /// REST implementation.
 class ApiWarrantyRepository implements WarrantyRepository {
@@ -65,16 +75,21 @@ class ApiWarrantyRepository implements WarrantyRepository {
 
   final ApiClient api;
 
-  AuthSession _session(Map<String, dynamic> j) =>
-      AuthSession(j['token'] as String, AppUser.fromJson(j['user'] as Map<String, dynamic>));
+  AuthSession _session(Map<String, dynamic> j) => AuthSession(
+      j['token'] as String,
+      AppUser.fromJson(j['user'] as Map<String, dynamic>));
 
   @override
   Future<AuthSession> login(String email, String password) async =>
-      _session(await api.post('/auth/login', {'email': email.trim(), 'password': password}));
+      _session(await api
+          .post('/auth/login', {'email': email.trim(), 'password': password}));
 
   @override
-  Future<AuthSession> register(String email, String password, String name) async => _session(
-        await api.post('/auth/register', {'email': email.trim(), 'password': password, 'name': name.trim()}),
+  Future<AuthSession> register(
+          String email, String password, String name) async =>
+      _session(
+        await api.post('/auth/register',
+            {'email': email.trim(), 'password': password, 'name': name.trim()}),
       );
 
   @override
@@ -85,20 +100,29 @@ class ApiWarrantyRepository implements WarrantyRepository {
 
   @override
   Future<List<ProductCategory>> categories() async =>
-      _items(await api.get('/categories')).map(ProductCategory.fromJson).toList();
+      _items(await api.get('/categories'))
+          .map(ProductCategory.fromJson)
+          .toList();
 
   @override
-  Future<List<Product>> products({String category = '', String status = '', String query = ''}) async =>
-      _items(await api.get('/products', query: {'category': category, 'status': status, 'q': query}))
+  Future<List<Product>> products(
+          {String category = '',
+          String status = '',
+          String query = ''}) async =>
+      _items(await api.get('/products',
+              query: {'category': category, 'status': status, 'q': query}))
           .map(Product.fromJson)
           .toList();
 
   @override
   Future<List<Product>> expiring({int days = 90}) async =>
-      _items(await api.get('/products/expiring', query: {'days': '$days'})).map(Product.fromJson).toList();
+      _items(await api.get('/products/expiring', query: {'days': '$days'}))
+          .map(Product.fromJson)
+          .toList();
 
   @override
-  Future<Product> product(String id) async => Product.fromJson(await api.get('/products/$id'));
+  Future<Product> product(String id) async =>
+      Product.fromJson(await api.get('/products/$id'));
 
   @override
   Future<Product> createProduct(ProductDraft draft) async =>
@@ -112,59 +136,80 @@ class ApiWarrantyRepository implements WarrantyRepository {
   Future<void> deleteProduct(String id) => api.delete('/products/$id');
 
   @override
-  Future<ExtractionResult> extract({Uint8List? image, String imageName = 'fis.jpg', String text = ''}) async {
+  Future<ExtractionResult> extract(
+      {Uint8List? image,
+      String imageName = 'fis.jpg',
+      String text = ''}) async {
     if (image == null) {
-      return ExtractionResult.fromJson(await api.post('/extract', {'text': text}));
+      return ExtractionResult.fromJson(
+          await api.post('/extract', {'text': text}));
     }
     return ExtractionResult.fromJson(
-      await api.multipart('/extract', fields: {'text': text}, files: {'image': (image, imageName)}),
+      await api.multipart('/extract',
+          fields: {'text': text}, files: {'image': (image, imageName)}),
     );
   }
 
   @override
-  Future<List<ProductDocument>> documents(String productId, {String type = ''}) async =>
-      _items(await api.get('/products/$productId/documents', query: {'type': type}))
+  Future<List<ProductDocument>> documents(String productId,
+          {String type = ''}) async =>
+      _items(await api
+              .get('/products/$productId/documents', query: {'type': type}))
           .map(ProductDocument.fromJson)
           .toList();
 
   @override
-  Future<ProductDocument> uploadDocument(String productId, String type, Uint8List bytes, String filename,
+  Future<ProductDocument> uploadDocument(
+          String productId, String type, Uint8List bytes, String filename,
           {String serviceRecordId = ''}) async =>
       ProductDocument.fromJson(
         await api.multipart(
           '/products/$productId/documents',
-          fields: {'type': type, if (serviceRecordId.isNotEmpty) 'service_record_id': serviceRecordId},
+          fields: {
+            'type': type,
+            if (serviceRecordId.isNotEmpty) 'service_record_id': serviceRecordId
+          },
           files: {'file': (bytes, filename)},
         ),
       );
 
   @override
-  Future<Uint8List> documentBytes(String documentId) => api.bytes('/documents/$documentId/file');
+  Future<Uint8List> documentBytes(String documentId) =>
+      api.bytes('/documents/$documentId/file');
 
   @override
-  Future<void> deleteDocument(String documentId) => api.delete('/documents/$documentId');
+  Future<void> deleteDocument(String documentId) =>
+      api.delete('/documents/$documentId');
 
   @override
-  String documentUrl(String documentId) => api.uri('/documents/$documentId/file').toString();
+  String documentUrl(String documentId) =>
+      api.uri('/documents/$documentId/file').toString();
 
   @override
   Future<Map<String, String>> authHeaders() => api.authHeaders();
 
   @override
-  Future<ServiceRecord> createServiceRecord(String productId, ProblemType problem, String description) async =>
+  Future<ServiceRecord> createServiceRecord(
+          String productId, ProblemType problem, String description) async =>
       ServiceRecord.fromJson(
-        await api.post('/products/$productId/service-records', {'problem': problem.api, 'description': description}),
+        await api.post('/products/$productId/service-records',
+            {'problem': problem.api, 'description': description}),
       );
 
   @override
   Future<List<ServiceRecord>> serviceRecords({String productId = ''}) async {
-    final path = productId.isEmpty ? '/service-records' : '/products/$productId/service-records';
+    final path = productId.isEmpty
+        ? '/service-records'
+        : '/products/$productId/service-records';
     return _items(await api.get(path)).map(ServiceRecord.fromJson).toList();
   }
 
   @override
   Future<ServiceRecord> updateServiceRecord(String id,
-          {ServiceStatus? status, String? serviceName, DateTime? serviceDate, String? notes}) async =>
+          {ServiceStatus? status,
+          String? serviceName,
+          DateTime? serviceDate,
+          String? notes}) async =>
       ServiceRecord.fromJson(await api.patch('/service-records/$id', {
         if (status != null) 'status': status.api,
         if (serviceName != null) 'service_name': serviceName,
@@ -183,9 +228,12 @@ class ApiWarrantyRepository implements WarrantyRepository {
   }
 
   @override
-  Future<Uint8List> servicePack(String productId, {String serviceRecordId = ''}) =>
-      api.bytes('/products/$productId/service-pack.pdf', query: {'service_record_id': serviceRecordId});
+  Future<Uint8List> servicePack(String productId,
+          {String serviceRecordId = ''}) =>
+      api.bytes('/products/$productId/service-pack.pdf',
+          query: {'service_record_id': serviceRecordId});
 
   @override
-  Future<Dashboard> dashboard() async => Dashboard.fromJson(await api.get('/dashboard'));
+  Future<Dashboard> dashboard() async =>
+      Dashboard.fromJson(await api.get('/dashboard'));
 }

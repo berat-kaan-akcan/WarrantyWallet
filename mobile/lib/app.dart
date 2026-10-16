@@ -28,7 +28,10 @@ class _WarrantyWalletAppState extends ConsumerState<WarrantyWalletApp> {
       title: 'Warranty Wallet',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(colorSchemeSeed: brandColor, useMaterial3: true),
-      darkTheme: ThemeData(colorSchemeSeed: brandColor, brightness: Brightness.dark, useMaterial3: true),
+      darkTheme: ThemeData(
+          colorSchemeSeed: brandColor,
+          brightness: Brightness.dark,
+          useMaterial3: true),
       home: !auth.initialized
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
           : auth.isLoggedIn

@@ -43,28 +43,37 @@ class HomeScreen extends ConsumerWidget {
           children: [
             Text(
               dashboard.valueOrNull?.greeting ??
-                  (user?.firstName.isNotEmpty == true ? 'Merhaba, ${user!.firstName}' : 'Merhaba'),
+                  (user?.firstName.isNotEmpty == true
+                      ? 'Merhaba, ${user!.firstName}'
+                      : 'Merhaba'),
               key: const Key('greeting'),
               style: theme.textTheme.headlineSmall,
             ),
             const SizedBox(height: 16),
             dashboard.when(
               data: (d) => _SummaryCard(d: d),
-              loading: () => const SizedBox(height: 96, child: Center(child: CircularProgressIndicator())),
-              error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(dashboardProvider)),
+              loading: () => const SizedBox(
+                  height: 96,
+                  child: Center(child: CircularProgressIndicator())),
+              error: (e, _) => ErrorState(
+                  error: e, onRetry: () => ref.invalidate(dashboardProvider)),
             ),
             const SizedBox(height: 24),
             Row(
               children: [
-                Expanded(child: Text('Garanti yakında bitiyor', style: theme.textTheme.titleMedium)),
-                if (onShowAll != null) TextButton(onPressed: onShowAll, child: const Text('Tümü')),
+                Expanded(
+                    child: Text('Garanti yakında bitiyor',
+                        style: theme.textTheme.titleMedium)),
+                if (onShowAll != null)
+                  TextButton(onPressed: onShowAll, child: const Text('Tümü')),
               ],
             ),
             expiring.when(
               data: (items) => items.isEmpty
                   ? const Padding(
                       padding: EdgeInsets.symmetric(vertical: 12),
-                      child: Text('Önümüzdeki 90 gün içinde garantisi biten ürün yok. 🎉'),
+                      child: Text(
+                          'Önümüzdeki 90 gün içinde garantisi biten ürün yok. 🎉'),
                     )
                   : Column(children: [for (final p in items) _ExpiringTile(p)]),
               loading: () => const LinearProgressIndicator(),
@@ -78,7 +87,8 @@ class HomeScreen extends ConsumerWidget {
                   ? EmptyState(
                       icon: Icons.receipt_long,
                       title: 'Henüz ürün eklemedin',
-                      message: 'Fişin fotoğrafını çek, gerisini uygulama halletsin.',
+                      message:
+                          'Fişin fotoğrafını çek, gerisini uygulama halletsin.',
                     )
                   : Wrap(
                       spacing: 8,
@@ -115,7 +125,8 @@ class _SummaryCard extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Row(
           children: [
-            Icon(Icons.verified_user, size: 40, color: theme.colorScheme.onPrimaryContainer),
+            Icon(Icons.verified_user,
+                size: 40, color: theme.colorScheme.onPrimaryContainer),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -124,11 +135,13 @@ class _SummaryCard extends StatelessWidget {
                   Text(
                     '${d.activeWarranties}',
                     key: const Key('active_count'),
-                    style: theme.textTheme.displaySmall?.copyWith(color: theme.colorScheme.onPrimaryContainer),
+                    style: theme.textTheme.displaySmall
+                        ?.copyWith(color: theme.colorScheme.onPrimaryContainer),
                   ),
                   Text(
                     'aktif garanti • ${d.totalProducts} ürün',
-                    style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onPrimaryContainer),
+                    style: theme.textTheme.bodyLarge
+                        ?.copyWith(color: theme.colorScheme.onPrimaryContainer),
                   ),
                 ],
               ),
@@ -154,7 +167,8 @@ class _ExpiringTile extends StatelessWidget {
         subtitle: Text(categoryName(p.category)),
         trailing: DaysLeftText(p.daysLeft, p.status),
         onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => ProductDetailScreen(productId: p.id)),
+          MaterialPageRoute<void>(
+              builder: (_) => ProductDetailScreen(productId: p.id)),
         ),
       ),
     );

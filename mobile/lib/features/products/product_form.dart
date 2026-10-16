@@ -10,7 +10,9 @@ const warrantyChoices = [0, 6, 12, 24, 36, 48, 60, 120];
 /// Label for a warranty period.
 String warrantyLabel(int months) {
   if (months == 0) return 'Garanti yok';
-  if (months % 12 == 0 && months >= 12) return '$months Ay (${months ~/ 12} yıl)';
+  if (months % 12 == 0 && months >= 12) {
+    return '$months Ay (${months ~/ 12} yıl)';
+  }
   return '$months Ay';
 }
 
@@ -58,7 +60,9 @@ class ProductFormState extends State<ProductForm> {
       name: i.name,
       brand: i.brand,
       model: i.model,
-      category: widget.categories.any((c) => c.slug == i.category) ? i.category : 'other',
+      category: widget.categories.any((c) => c.slug == i.category)
+          ? i.category
+          : 'other',
       seller: i.seller,
       purchaseDate: i.purchaseDate,
       price: i.price,
@@ -71,7 +75,8 @@ class ProductFormState extends State<ProductForm> {
     _brand = TextEditingController(text: i.brand);
     _model = TextEditingController(text: i.model);
     _seller = TextEditingController(text: i.seller);
-    _price = TextEditingController(text: i.price > 0 ? formatMoney(i.price, '').trim() : '');
+    _price = TextEditingController(
+        text: i.price > 0 ? formatMoney(i.price, '').trim() : '');
     _serial = TextEditingController(text: i.serialNumber);
     _notes = TextEditingController(text: i.notes);
   }
@@ -89,7 +94,9 @@ class ProductFormState extends State<ProductForm> {
     return InputDecoration(
       labelText: label,
       helperText: warn ? 'Fişten okunamadı, lütfen kontrol edin' : helper,
-      helperStyle: warn ? TextStyle(color: Theme.of(context).colorScheme.tertiary) : null,
+      helperStyle: warn
+          ? TextStyle(color: Theme.of(context).colorScheme.tertiary)
+          : null,
       border: const OutlineInputBorder(),
       suffixIcon: warn ? const Icon(Icons.edit_note) : null,
     );
@@ -106,7 +113,8 @@ class ProductFormState extends State<ProductForm> {
     );
     if (picked != null) {
       setState(() {
-        draft.purchaseDate = DateTime.utc(picked.year, picked.month, picked.day);
+        draft.purchaseDate =
+            DateTime.utc(picked.year, picked.month, picked.day);
         _dateError = null;
       });
     }
@@ -151,14 +159,19 @@ class ProductFormState extends State<ProductForm> {
             controller: _name,
             decoration: _dec('Ürün adı *', 'product_name'),
             textCapitalization: TextCapitalization.words,
-            validator: (v) => (v ?? '').trim().isEmpty ? 'Ürün adı gerekli' : null,
+            validator: (v) =>
+                (v ?? '').trim().isEmpty ? 'Ürün adı gerekli' : null,
           ),
           gap,
           Row(
             children: [
-              Expanded(child: TextFormField(controller: _brand, decoration: _dec('Marka', 'brand'))),
+              Expanded(
+                  child: TextFormField(
+                      controller: _brand, decoration: _dec('Marka', 'brand'))),
               const SizedBox(width: 12),
-              Expanded(child: TextFormField(controller: _model, decoration: _dec('Model', 'model'))),
+              Expanded(
+                  child: TextFormField(
+                      controller: _model, decoration: _dec('Model', 'model'))),
             ],
           ),
           gap,
@@ -166,18 +179,25 @@ class ProductFormState extends State<ProductForm> {
             key: const Key('f_category'),
             initialValue: draft.category,
             decoration: _dec('Kategori', 'category'),
-            items: [for (final c in widget.categories) DropdownMenuItem(value: c.slug, child: Text(c.name))],
+            items: [
+              for (final c in widget.categories)
+                DropdownMenuItem(value: c.slug, child: Text(c.name))
+            ],
             onChanged: (v) => setState(() => draft.category = v ?? 'other'),
           ),
           gap,
-          TextFormField(controller: _seller, decoration: _dec('Satıcı', 'seller')),
+          TextFormField(
+              controller: _seller, decoration: _dec('Satıcı', 'seller')),
           gap,
           InkWell(
             key: const Key('f_date'),
             onTap: _pickDate,
             child: InputDecorator(
-              decoration: _dec('Satın alma tarihi *', 'purchase_date').copyWith(errorText: _dateError),
-              child: Text(draft.purchaseDate == null ? 'Tarih seçin' : formatDate(draft.purchaseDate)),
+              decoration: _dec('Satın alma tarihi *', 'purchase_date')
+                  .copyWith(errorText: _dateError),
+              child: Text(draft.purchaseDate == null
+                  ? 'Tarih seçin'
+                  : formatDate(draft.purchaseDate)),
             ),
           ),
           gap,
@@ -189,17 +209,24 @@ class ProductFormState extends State<ProductForm> {
                   key: const Key('f_price'),
                   controller: _price,
                   decoration: _dec('Fiyat', 'price'),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   validator: (v) =>
-                      (v ?? '').trim().isNotEmpty && parseMoney(v!) == null ? 'Geçerli bir tutar girin' : null,
+                      (v ?? '').trim().isNotEmpty && parseMoney(v!) == null
+                          ? 'Geçerli bir tutar girin'
+                          : null,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 flex: 2,
                 child: DropdownButtonFormField<String>(
-                  initialValue: const ['TRY', 'USD', 'EUR'].contains(draft.currency) ? draft.currency : 'TRY',
-                  decoration: const InputDecoration(labelText: 'Para birimi', border: OutlineInputBorder()),
+                  initialValue:
+                      const ['TRY', 'USD', 'EUR'].contains(draft.currency)
+                          ? draft.currency
+                          : 'TRY',
+                  decoration: const InputDecoration(
+                      labelText: 'Para birimi', border: OutlineInputBorder()),
                   items: const [
                     DropdownMenuItem(value: 'TRY', child: Text('TL')),
                     DropdownMenuItem(value: 'USD', child: Text('USD')),
@@ -215,8 +242,12 @@ class ProductFormState extends State<ProductForm> {
             key: const Key('f_warranty'),
             initialValue: draft.warrantyMonths,
             decoration: _dec('Garanti süresi', 'warranty_months'),
-            items: [for (final m in months) DropdownMenuItem(value: m, child: Text(warrantyLabel(m)))],
-            onChanged: (v) => setState(() => draft.warrantyMonths = v ?? defaultWarrantyMonths),
+            items: [
+              for (final m in months)
+                DropdownMenuItem(value: m, child: Text(warrantyLabel(m)))
+            ],
+            onChanged: (v) => setState(
+                () => draft.warrantyMonths = v ?? defaultWarrantyMonths),
           ),
           const SizedBox(height: 8),
           Semantics(
@@ -226,14 +257,18 @@ class ProductFormState extends State<ProductForm> {
                 leading: const Icon(Icons.event_available),
                 title: const Text('Garanti bitiş tarihi'),
                 subtitle: Text(
-                  end == null ? 'Tarih ve süre seçince hesaplanır' : formatDate(end),
+                  end == null
+                      ? 'Tarih ve süre seçince hesaplanır'
+                      : formatDate(end),
                   key: const Key('f_end_preview'),
                 ),
               ),
             ),
           ),
           gap,
-          TextFormField(controller: _serial, decoration: _dec('Seri numarası', 'serial_number')),
+          TextFormField(
+              controller: _serial,
+              decoration: _dec('Seri numarası', 'serial_number')),
           gap,
           TextFormField(
             controller: _notes,
@@ -246,7 +281,10 @@ class ProductFormState extends State<ProductForm> {
             key: const Key('f_submit'),
             onPressed: _saving ? null : _submit,
             icon: _saving
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.save),
             label: Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),

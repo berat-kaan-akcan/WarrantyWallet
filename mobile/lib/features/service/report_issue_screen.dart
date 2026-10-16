@@ -45,9 +45,12 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
     setState(() => _busy = true);
     final repo = ref.read(repositoryProvider);
     try {
-      final rec = await repo.createServiceRecord(widget.product.id, problem, _description.text.trim());
+      final rec = await repo.createServiceRecord(
+          widget.product.id, problem, _description.text.trim());
       for (final photo in _photos) {
-        await repo.uploadDocument(widget.product.id, 'photo', photo.bytes, photo.name, serviceRecordId: rec.id);
+        await repo.uploadDocument(
+            widget.product.id, 'photo', photo.bytes, photo.name,
+            serviceRecordId: rec.id);
       }
       if (!mounted) return;
       refreshProducts(ref, widget.product.id);
@@ -64,7 +67,9 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
     if (rec == null) return;
     setState(() => _busy = true);
     try {
-      final bytes = await ref.read(repositoryProvider).servicePack(widget.product.id, serviceRecordId: rec.id);
+      final bytes = await ref
+          .read(repositoryProvider)
+          .servicePack(widget.product.id, serviceRecordId: rec.id);
       await shareBytes(bytes, 'servis-paketi.pdf');
     } on ApiException catch (e) {
       if (mounted) showSnack(context, e.userMessage, error: true);
@@ -91,8 +96,13 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
         Text(widget.product.name, style: theme.textTheme.titleLarge),
         const SizedBox(height: 4),
         Text(
-          widget.product.isCovered ? 'Garanti kapsamında' : 'Garanti süresi dolmuş — ücretli servis gerekebilir',
-          style: TextStyle(color: widget.product.isCovered ? Colors.green.shade700 : theme.colorScheme.error),
+          widget.product.isCovered
+              ? 'Garanti kapsamında'
+              : 'Garanti süresi dolmuş — ücretli servis gerekebilir',
+          style: TextStyle(
+              color: widget.product.isCovered
+                  ? Colors.green.shade700
+                  : theme.colorScheme.error),
         ),
         const SizedBox(height: 16),
         Text('1. Sorun nedir?', style: theme.textTheme.titleMedium),
@@ -102,7 +112,9 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
             selected: _problem == p,
             child: ListTile(
               key: Key('problem_${p.api}'),
-              leading: Icon(_problem == p ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+              leading: Icon(_problem == p
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked),
               title: Text(p.label),
               selected: _problem == p,
               onTap: () => setState(() => _problem = p),
@@ -130,7 +142,8 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.memory(_photos[i].bytes, width: 88, height: 88, fit: BoxFit.cover),
+                    child: Image.memory(_photos[i].bytes,
+                        width: 88, height: 88, fit: BoxFit.cover),
                   ),
                   Positioned(
                     right: 0,
@@ -155,9 +168,14 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
           key: const Key('create_service'),
           onPressed: _busy ? null : _submit,
           icon: _busy
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2))
               : const Icon(Icons.build),
-          label: const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('3. Servis kaydı oluştur')),
+          label: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text('3. Servis kaydı oluştur')),
         ),
       ],
     );
@@ -170,19 +188,23 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
       children: [
         Icon(Icons.check_circle, size: 64, color: Colors.green.shade600),
         const SizedBox(height: 8),
-        Text('Servis kaydı oluşturuldu', textAlign: TextAlign.center, style: theme.textTheme.titleLarge),
+        Text('Servis kaydı oluşturuldu',
+            textAlign: TextAlign.center, style: theme.textTheme.titleLarge),
         const SizedBox(height: 8),
         Text('Sorun: ${rec.problem.label}', textAlign: TextAlign.center),
         const SizedBox(height: 24),
         if (rec.underWarranty) ...[
-          Text('Servise götürmeniz gereken belgeler', style: theme.textTheme.titleMedium),
+          Text('Servise götürmeniz gereken belgeler',
+              style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
           for (final item in rec.checklist)
             CheckboxListTile(
               value: item.ok,
               onChanged: null,
               title: Text(item.label),
-              subtitle: item.ok ? null : const Text('Eksik — ürün detayından ekleyebilirsiniz'),
+              subtitle: item.ok
+                  ? null
+                  : const Text('Eksik — ürün detayından ekleyebilirsiniz'),
               controlAffinity: ListTileControlAffinity.leading,
             ),
           const SizedBox(height: 16),
@@ -200,11 +222,14 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
             child: ListTile(
               leading: Icon(Icons.info_outline),
               title: Text('Garanti süresi dolmuş'),
-              subtitle: Text('Onarım ücretli olabilir. Servis kaydınız geçmişinizde saklanır.'),
+              subtitle: Text(
+                  'Onarım ücretli olabilir. Servis kaydınız geçmişinizde saklanır.'),
             ),
           ),
         const SizedBox(height: 12),
-        OutlinedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Kapat')),
+        OutlinedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Kapat')),
       ],
     );
   }

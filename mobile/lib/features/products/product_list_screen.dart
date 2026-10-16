@@ -25,7 +25,12 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     super.dispose();
   }
 
-  static const _statuses = {'': 'Tümü', 'active': 'Aktif', 'expiring_soon': 'Yakında bitiyor', 'expired': 'Bitti'};
+  static const _statuses = {
+    '': 'Tümü',
+    'active': 'Aktif',
+    'expiring_soon': 'Yakında bitiyor',
+    'expired': 'Bitti'
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -51,13 +56,17 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                         icon: const Icon(Icons.clear),
                         onPressed: () {
                           _search.clear();
-                          setState(() => _query = ProductQuery(category: _query.category, status: _query.status));
+                          setState(() => _query = ProductQuery(
+                              category: _query.category,
+                              status: _query.status));
                         },
                       ),
               ),
               textInputAction: TextInputAction.search,
-              onSubmitted: (v) =>
-                  setState(() => _query = ProductQuery(category: _query.category, status: _query.status, text: v.trim())),
+              onSubmitted: (v) => setState(() => _query = ProductQuery(
+                  category: _query.category,
+                  status: _query.status,
+                  text: v.trim())),
             ),
           ),
           SizedBox(
@@ -72,8 +81,10 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                     child: ChoiceChip(
                       label: Text(e.value),
                       selected: _query.status == e.key,
-                      onSelected: (_) =>
-                          setState(() => _query = ProductQuery(category: _query.category, status: e.key, text: _query.text)),
+                      onSelected: (_) => setState(() => _query = ProductQuery(
+                          category: _query.category,
+                          status: e.key,
+                          text: _query.text)),
                     ),
                   ),
                 const VerticalDivider(),
@@ -83,11 +94,15 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                     value: _query.category,
                     underline: const SizedBox.shrink(),
                     items: [
-                      const DropdownMenuItem(value: '', child: Text('Tüm kategoriler')),
-                      for (final c in cats) DropdownMenuItem(value: c.slug, child: Text(c.name)),
+                      const DropdownMenuItem(
+                          value: '', child: Text('Tüm kategoriler')),
+                      for (final c in cats)
+                        DropdownMenuItem(value: c.slug, child: Text(c.name)),
                     ],
-                    onChanged: (v) =>
-                        setState(() => _query = ProductQuery(category: v ?? '', status: _query.status, text: _query.text)),
+                    onChanged: (v) => setState(() => _query = ProductQuery(
+                        category: v ?? '',
+                        status: _query.status,
+                        text: _query.text)),
                   ),
                 ),
               ],
@@ -105,7 +120,9 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                         children: [
                           EmptyState(
                             icon: Icons.inventory_2_outlined,
-                            title: _query == const ProductQuery() ? 'Henüz ürün yok' : 'Sonuç bulunamadı',
+                            title: _query == const ProductQuery()
+                                ? 'Henüz ürün yok'
+                                : 'Sonuç bulunamadı',
                             message: _query == const ProductQuery()
                                 ? '"Ürün Ekle" ile fişinin fotoğrafını çek.'
                                 : 'Filtreleri değiştirmeyi deneyin.',
@@ -116,11 +133,14 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                         padding: const EdgeInsets.only(bottom: 96),
                         itemCount: items.length,
                         separatorBuilder: (_, __) => const Divider(height: 1),
-                        itemBuilder: (_, i) => ProductTile(product: items[i], categories: cats),
+                        itemBuilder: (_, i) =>
+                            ProductTile(product: items[i], categories: cats),
                       ),
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(productsProvider(_query))),
+              error: (e, _) => ErrorState(
+                  error: e,
+                  onRetry: () => ref.invalidate(productsProvider(_query))),
             ),
           ),
         ],
@@ -131,7 +151,8 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
 
 /// One product row.
 class ProductTile extends StatelessWidget {
-  const ProductTile({super.key, required this.product, this.categories = defaultCategories});
+  const ProductTile(
+      {super.key, required this.product, this.categories = defaultCategories});
 
   final Product product;
   final List<ProductCategory> categories;
@@ -142,10 +163,12 @@ class ProductTile extends StatelessWidget {
     return ListTile(
       leading: CircleAvatar(child: Icon(categoryIcon(p.category))),
       title: Text(p.name, maxLines: 2),
-      subtitle: Text('${categoryName(p.category, categories)} • Bitiş: ${formatDate(p.warrantyEnd)}'),
+      subtitle: Text(
+          '${categoryName(p.category, categories)} • Bitiş: ${formatDate(p.warrantyEnd)}'),
       trailing: StatusChip(p.status),
       onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => ProductDetailScreen(productId: p.id)),
+        MaterialPageRoute<void>(
+            builder: (_) => ProductDetailScreen(productId: p.id)),
       ),
     );
   }

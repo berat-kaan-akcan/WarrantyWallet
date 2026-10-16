@@ -14,10 +14,17 @@ List<Map<String, dynamic>> _list(Object? v) =>
 
 /// Logged-in user.
 class AppUser {
-  const AppUser({required this.id, required this.email, required this.name, required this.role});
+  const AppUser(
+      {required this.id,
+      required this.email,
+      required this.name,
+      required this.role});
 
-  factory AppUser.fromJson(Map<String, dynamic> j) =>
-      AppUser(id: _s(j['id']), email: _s(j['email']), name: _s(j['name']), role: _s(j['role']));
+  factory AppUser.fromJson(Map<String, dynamic> j) => AppUser(
+      id: _s(j['id']),
+      email: _s(j['email']),
+      name: _s(j['name']),
+      role: _s(j['role']));
 
   final String id;
   final String email;
@@ -37,7 +44,8 @@ class AppUser {
 class ProductCategory {
   const ProductCategory(this.slug, this.name);
 
-  factory ProductCategory.fromJson(Map<String, dynamic> j) => ProductCategory(_s(j['slug']), _s(j['name_tr']));
+  factory ProductCategory.fromJson(Map<String, dynamic> j) =>
+      ProductCategory(_s(j['slug']), _s(j['name_tr']));
 
   final String slug;
   final String name;
@@ -60,7 +68,8 @@ const defaultCategories = <ProductCategory>[
 ];
 
 /// Turkish name for a category slug.
-String categoryName(String slug, [List<ProductCategory> cats = defaultCategories]) {
+String categoryName(String slug,
+    [List<ProductCategory> cats = defaultCategories]) {
   for (final c in cats) {
     if (c.slug == slug) return c.name;
   }
@@ -102,7 +111,8 @@ class Product {
         serialNumber: _s(j['serial_number']),
         notes: _s(j['notes']),
         status: warrantyStatusFromApi(j['status'] as String?),
-        daysLeft: j['days_left'] is num ? (j['days_left'] as num).toInt() : null,
+        daysLeft:
+            j['days_left'] is num ? (j['days_left'] as num).toInt() : null,
       );
 
   final String id;
@@ -121,7 +131,8 @@ class Product {
   final WarrantyStatus status;
   final int? daysLeft;
 
-  bool get isCovered => status == WarrantyStatus.active || status == WarrantyStatus.expiringSoon;
+  bool get isCovered =>
+      status == WarrantyStatus.active || status == WarrantyStatus.expiringSoon;
 }
 
 /// Editable product fields sent to the API (warranty_end is computed server-side).
@@ -226,8 +237,8 @@ enum ProblemType {
   final String api;
   final String label;
 
-  static ProblemType fromApi(String v) =>
-      ProblemType.values.firstWhere((p) => p.api == v, orElse: () => ProblemType.other);
+  static ProblemType fromApi(String v) => ProblemType.values
+      .firstWhere((p) => p.api == v, orElse: () => ProblemType.other);
 }
 
 /// Service lifecycle.
@@ -242,8 +253,8 @@ enum ServiceStatus {
   final String api;
   final String label;
 
-  static ServiceStatus fromApi(String v) =>
-      ServiceStatus.values.firstWhere((s) => s.api == v, orElse: () => ServiceStatus.open);
+  static ServiceStatus fromApi(String v) => ServiceStatus.values
+      .firstWhere((s) => s.api == v, orElse: () => ServiceStatus.open);
 }
 
 /// Document checklist entry for the service visit.
@@ -329,7 +340,9 @@ class ExtractionResult {
         purchaseDate: _date(f['purchase_date']),
         price: _d(f['price']),
         currency: _s(f['currency']).isEmpty ? 'TRY' : _s(f['currency']),
-        warrantyMonths: months > 0 ? months : (suggested > 0 ? suggested : defaultWarrantyMonths),
+        warrantyMonths: months > 0
+            ? months
+            : (suggested > 0 ? suggested : defaultWarrantyMonths),
         serialNumber: _s(f['serial_number']),
       ),
       provider: _s(j['provider']),
@@ -354,8 +367,8 @@ class ExtractionResult {
 class CategoryStat {
   const CategoryStat(this.category, this.name, this.count, this.total);
 
-  factory CategoryStat.fromJson(Map<String, dynamic> j) =>
-      CategoryStat(_s(j['category']), _s(j['name']), _i(j['count']), _d(j['total']));
+  factory CategoryStat.fromJson(Map<String, dynamic> j) => CategoryStat(
+      _s(j['category']), _s(j['name']), _i(j['count']), _d(j['total']));
 
   final String category;
   final String name;

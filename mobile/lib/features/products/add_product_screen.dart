@@ -42,7 +42,8 @@ class DeviceImageSource implements ReceiptImagePicker {
   }
 }
 
-final imageSourceProvider = Provider<ReceiptImagePicker>((ref) => DeviceImageSource());
+final imageSourceProvider =
+    Provider<ReceiptImagePicker>((ref) => DeviceImageSource());
 
 enum _Step { choose, reading, review }
 
@@ -72,7 +73,8 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     final repo = ref.read(repositoryProvider);
     try {
       final text = await ocr.recognize(picked.path);
-      final result = await repo.extract(image: picked.bytes, imageName: picked.name, text: text);
+      final result = await repo.extract(
+          image: picked.bytes, imageName: picked.name, text: text);
       if (!mounted) return;
       setState(() {
         _result = result;
@@ -104,16 +106,22 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
       final image = _image;
       if (image != null) {
         try {
-          await repo.uploadDocument(product.id, 'invoice', image.bytes, image.name);
+          await repo.uploadDocument(
+              product.id, 'invoice', image.bytes, image.name);
         } on ApiException catch (e) {
-          if (mounted) showSnack(context, 'Ürün kaydedildi ama fatura yüklenemedi: ${e.userMessage}', error: true);
+          if (mounted) {
+            showSnack(context,
+                'Ürün kaydedildi ama fatura yüklenemedi: ${e.userMessage}',
+                error: true);
+          }
         }
       }
       await scheduler.syncProduct(product);
       if (!mounted) return;
       refreshProducts(ref);
       unawaited(navigator.pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => ProductDetailScreen(productId: product.id)),
+        MaterialPageRoute<void>(
+            builder: (_) => ProductDetailScreen(productId: product.id)),
       ));
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -140,7 +148,10 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
               if (_image != null)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.memory(_image!.bytes, height: 160, fit: BoxFit.cover, semanticLabel: 'Fiş fotoğrafı'),
+                  child: Image.memory(_image!.bytes,
+                      height: 160,
+                      fit: BoxFit.cover,
+                      semanticLabel: 'Fiş fotoğrafı'),
                 ),
               const SizedBox(height: 12),
               _ExtractionBanner(result: _result, error: _error),
@@ -159,7 +170,10 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
 }
 
 class _ChooseSource extends StatelessWidget {
-  const _ChooseSource({required this.onCamera, required this.onGallery, required this.onManual});
+  const _ChooseSource(
+      {required this.onCamera,
+      required this.onGallery,
+      required this.onManual});
 
   final VoidCallback onCamera;
   final VoidCallback onGallery;
@@ -183,17 +197,24 @@ class _ChooseSource extends StatelessWidget {
             key: const Key('pick_camera'),
             onPressed: onCamera,
             icon: const Icon(Icons.photo_camera),
-            label: const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('Fiş / fatura fotoğrafı çek')),
+            label: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text('Fiş / fatura fotoğrafı çek')),
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
             key: const Key('pick_gallery'),
             onPressed: onGallery,
             icon: const Icon(Icons.photo_library),
-            label: const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('Galeriden seç')),
+            label: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text('Galeriden seç')),
           ),
           const SizedBox(height: 12),
-          TextButton(key: const Key('manual'), onPressed: onManual, child: const Text('Bilgileri elle gir')),
+          TextButton(
+              key: const Key('manual'),
+              onPressed: onManual,
+              child: const Text('Bilgileri elle gir')),
         ],
       ),
     );
@@ -211,7 +232,8 @@ class _Reading extends StatelessWidget {
         children: [
           CircularProgressIndicator(),
           SizedBox(height: 16),
-          Text('Fiş okunuyor…', semanticsLabel: 'Fiş okunuyor, lütfen bekleyin'),
+          Text('Fiş okunuyor…',
+              semanticsLabel: 'Fiş okunuyor, lütfen bekleyin'),
         ],
       ),
     );
@@ -233,21 +255,29 @@ class _ExtractionBanner extends StatelessWidget {
       text = error!;
       icon = Icons.warning_amber;
     } else if (result == null) {
-      text = 'Ürün bilgilerini girin. Garanti bitiş tarihi otomatik hesaplanır.';
+      text =
+          'Ürün bilgilerini girin. Garanti bitiş tarihi otomatik hesaplanır.';
       icon = Icons.edit;
     } else if (result!.provider == 'none') {
-      text = 'Fiş otomatik okunamadı. Lütfen bilgileri girin; fotoğraf fatura olarak kaydedilecek.';
+      text =
+          'Fiş otomatik okunamadı. Lütfen bilgileri girin; fotoğraf fatura olarak kaydedilecek.';
       icon = Icons.warning_amber;
     } else {
-      final who = result!.provider == 'gemini' ? 'Yapay zekâ' : 'Otomatik okuma';
-      final missing = result!.missing.isEmpty ? '' : ' İşaretli alanları kontrol edin.';
-      final warranty = result!.warrantyStated ? '' : ' Garanti süresi belgede yok, varsayılan 24 ay seçildi.';
+      final who =
+          result!.provider == 'gemini' ? 'Yapay zekâ' : 'Otomatik okuma';
+      final missing =
+          result!.missing.isEmpty ? '' : ' İşaretli alanları kontrol edin.';
+      final warranty = result!.warrantyStated
+          ? ''
+          : ' Garanti süresi belgede yok, varsayılan 24 ay seçildi.';
       text = '$who fişten bilgileri çıkardı.$missing$warranty';
       icon = Icons.auto_awesome;
     }
     return Card(
       color: theme.colorScheme.secondaryContainer,
-      child: ListTile(leading: Icon(icon), title: Text(text, key: const Key('extract_banner'))),
+      child: ListTile(
+          leading: Icon(icon),
+          title: Text(text, key: const Key('extract_banner'))),
     );
   }
 }

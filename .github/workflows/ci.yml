@@ -68,7 +68,7 @@ jobs:
         run: docker build -t warranty-wallet-api:ci ./backend
 
   mobile:
-    name: Mobile (analyze + tests)
+    name: Mobile (format, analyze, tests)
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -78,9 +78,31 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: "3.47.7"
           cache: true
       - run: flutter pub get
-      - name: dart format (report only)
-        run: dart format --output=none lib test || true
+      - name: dart format
+        run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze
       - run: flutter test
+
+  mobile-android:
+    name: Mobile (Android debug APK)
+    runs-on: ubuntu-24.04
+    needs: mobile
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.7"
+          cache: true
+      - run: flutter pub get
+      - run: flutter build apk --debug

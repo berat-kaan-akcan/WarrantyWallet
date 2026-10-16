@@ -12,5 +12,6 @@ Future<void> main() async {
   } on Exception catch (e) {
     debugPrint('Notifications unavailable: $e');
   }
-  runApp(UncontrolledProviderScope(container: container, child: const WarrantyWalletApp()));
+  runApp(UncontrolledProviderScope(
+      container: container, child: const WarrantyWalletApp()));
 }
