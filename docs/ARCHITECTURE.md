@@ -26,7 +26,7 @@ bu dokümanı okumalıdır.
 | **Go + standart `net/http`** (Go 1.22+ desen yönlendirme) | Fikir sahibinin önerisi. Ek framework yok → öğrenme eğrisi düşük, bağımlılık az. Tek statik binary, küçük Docker imajı. |
 | **PostgreSQL + pgx** | İlişkisel veri (kullanıcı → ürün → belge/servis kaydı). `pgx` en yaygın ve hızlı sürücü. |
 | **Gömülü SQL migration'lar** (`embed`) | Ek araç gerektirmez; API açılışta `schema_migrations` tablosuna bakarak sırayla uygular. |
-| **JWT (HS256) + bcrypt** | Durumsuz kimlik doğrulama, mobil için basit. Access token 7 gün (MVP); V2'de refresh token. |
+| **JWT (HS256) + PBKDF2** | Durumsuz kimlik doğrulama, mobil için basit. Access token 1 saat + opak refresh token (30 gün, tek kullanımlık rotasyon, sunucuda SHA-256 özeti). |
 | **Storage arayüzü** — V1'de yerel disk (Docker volume) | MinIO/S3 opsiyoneldir; arayüz sayesinde `S3Storage` sonradan eklenebilir. MVP'de ek servis çalıştırmamak için. |
 | **Redis şimdilik YOK** | V1 bildirimleri cihazda yerel olarak planlanır (internet gerekmez, güvenilir). Sunucu tarafında `notifications` tablosu + Go içinde periyodik işçi (`FOR UPDATE SKIP LOCKED`) yeterli. Redis, V2'de FCM push + kuyruk ihtiyacı doğunca eklenecek. |
 | **Flutter + Riverpod** | Tek kod tabanı ile Android/iOS. Riverpod test edilebilir, BuildContext'e bağlı olmayan durum yönetimi sunar. |
@@ -91,8 +91,12 @@ Tümü `/api/v1` altında, JSON. Auth gerektirenler `Authorization: Bearer <jwt>
 |---|---|---|
 | GET | `/healthz` | Sağlık kontrolü |
 | POST | `/auth/register` | `{email,password,name}` → `{token,user}` |
-| POST | `/auth/login` | `{email,password}` → `{token,user}` |
-| GET | `/me` | Oturumdaki kullanıcı |
+| POST | `/auth/login` | `{email,password}` → `{token,refresh_token,user}` |
+| POST | `/auth/refresh` | Refresh token rotasyonu → yeni token çifti |
+| POST | `/auth/logout` | Refresh token(lar)ı iptal |
+| POST | `/auth/password/forgot` · `/auth/password/reset` | Şifre sıfırlama (kod e-postayla) |
+| GET/PATCH/DELETE | `/me` | Oturumdaki kullanıcı / ad güncelle / hesabı sil |
+| PUT | `/me/password` | Şifre değiştir |
 | GET | `/products?category=&status=&q=` | Ürün listesi |
 | POST | `/products` | Ürün oluştur (bitiş tarihi sunucuda hesaplanır) |
 | GET/PUT/DELETE | `/products/{id}` | Detay / güncelle / sil |
@@ -150,7 +154,9 @@ type ReceiptExtractor interface {
   Repoda sadece boş değerli `.env.example` bulunur.
 - Her kaynak sorgusu `user_id` ile filtrelenir (başka kullanıcının ürününe erişim → 404).
 - Yükleme sınırı 10 MB; izinli türler: JPEG, PNG, WEBP, HEIC, PDF.
-- Parola en az 8 karakter, bcrypt.
+- Parola 8–128 karakter, PBKDF2-SHA256 (600.000 iterasyon).
+- Refresh ve şifre sıfırlama token'ları yalnızca SHA-256 özetiyle saklanır; şifre değişince/sıfırlanınca tüm oturumlar kapanır.
+- `X-Forwarded-For` yalnızca `TRUST_PROXY=true` iken hız sınırlamada kullanılır.
 - Basit IP başına hız sınırlama `/auth/*` ve `/extract` için.
 
 ## 8. Test stratejisi
