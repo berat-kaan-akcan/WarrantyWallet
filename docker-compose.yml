@@ -1,0 +1,37 @@
+# Local stack: PostgreSQL + Warranty Wallet API.
+#   cp .env.example .env   # fill GEMINI_API_KEY (optional) and JWT_SECRET
+#   docker compose up --build
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: warranty
+      POSTGRES_PASSWORD: warranty
+      POSTGRES_DB: warranty
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U warranty"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./backend
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgres://warranty:warranty@db:5432/warranty?sslmode=disable
+      STORAGE_DIR: /data/uploads
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      JWT_SECRET: ${JWT_SECRET:-dev-insecure-secret-change-me}
+    ports: ["8080:8080"]
+    volumes: [uploads:/data/uploads]
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  uploads:

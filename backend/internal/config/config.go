@@ -39,7 +39,7 @@ func Load(getenv func(string) string) (Config, error) {
 		StorageDir:    def(getenv("STORAGE_DIR"), "./uploads"),
 		MaxUploadMB:   int64(num(getenv("MAX_UPLOAD_MB"), 10)),
 		GeminiAPIKey:  strings.TrimSpace(getenv("GEMINI_API_KEY")),
-		GeminiModel:   def(getenv("GEMINI_MODEL"), "gemini-2.5-flash"),
+		GeminiModel:   def(getenv("GEMINI_MODEL"), "gemini-3.8-flash"),
 		GeminiBaseURL: def(getenv("GEMINI_BASE_URL"), "https://generativelanguage.googleapis.com/v1beta"),
 		GeminiTimeout: dur(getenv("GEMINI_TIMEOUT"), 25*time.Second),
 		CORSOrigins:   def(getenv("CORS_ORIGINS"), "*"),
