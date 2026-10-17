@@ -120,6 +120,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/v1/extract", a(s.extractLimiter.wrap(http.HandlerFunc(s.handleExtract))))
 	mux.Handle("GET /api/v1/dashboard", a(http.HandlerFunc(s.handleDashboard)))
 	mux.Handle("GET /api/v1/notifications", a(http.HandlerFunc(s.handleNotifications)))
+	mux.Handle("POST /api/v1/devices", a(http.HandlerFunc(s.handleRegisterDevice)))
+	mux.Handle("DELETE /api/v1/devices/{token}", a(http.HandlerFunc(s.handleUnregisterDevice)))
 
 	mux.Handle("GET /api/v1/admin/stats", admin(s.handleAdminStats))
 	mux.Handle("GET /api/v1/admin/users", admin(s.handleAdminUsers))

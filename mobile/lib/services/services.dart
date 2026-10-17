@@ -273,3 +273,26 @@ String nextReminderText(Product p, DateTime now) {
   if (planned.isEmpty) return 'Planlanmış hatırlatıcı yok';
   return 'Sonraki hatırlatma: ${formatDate(planned.first.at)}';
 }
+
+/// Remote push (FCM) registration. The server sends warranty reminders to the token this
+/// returns, in addition to the local notifications scheduled on the device.
+///
+/// The app ships with [NoopPushService] until a Firebase project is configured: add
+/// `firebase_core` + `firebase_messaging`, put `google-services.json` /
+/// `GoogleService-Info.plist` in place, and override [pushServiceProvider] with an
+/// implementation that returns `FirebaseMessaging.instance.getToken()`.
+abstract class PushService {
+  /// The device's push token, or null when push is unavailable or not permitted.
+  Future<String?> token();
+
+  /// `android` or `ios`.
+  String get platform;
+}
+
+class NoopPushService implements PushService {
+  @override
+  Future<String?> token() async => null;
+
+  @override
+  String get platform => 'android';
+}

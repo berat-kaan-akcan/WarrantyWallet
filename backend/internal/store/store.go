@@ -63,6 +63,12 @@ type Store interface {
 	DueNotifications(ctx context.Context, now time.Time, limit int) ([]domain.Notification, error)
 	MarkNotificationSent(ctx context.Context, id string, at time.Time) error
 
+	// SaveDeviceToken upserts by token: re-registering moves the token to d.UserID.
+	SaveDeviceToken(ctx context.Context, d *domain.DeviceToken) error
+	// DeleteDeviceToken removes a token; userID "" removes it whoever owns it (invalid tokens).
+	DeleteDeviceToken(ctx context.Context, userID, token string) error
+	ListDeviceTokens(ctx context.Context, userID string) ([]domain.DeviceToken, error) // newest first
+
 	CreateExtractionLog(ctx context.Context, l *domain.ExtractionLog) error
 	ListExtractionLogs(ctx context.Context, onlyFailures bool, limit int) ([]domain.ExtractionLog, error)
 

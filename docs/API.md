@@ -205,6 +205,18 @@ E-postadaki bağlantı buraya gelir (`PUBLIC_BASE_URL` + bu yol). Tarayıcıda T
   "message":"ASUS monitörünüzün garantisinin bitmesine 90 gün kaldı.","scheduled_at":"2028-06-14T07:00:00Z","sent":false}]}
 ```
 
+### `POST /devices` (auth)
+```json
+{"token":"<FCM kayıt token'ı>","platform":"android"}
+```
+`204`. Uygulama girişten sonra çağırır; aynı token tekrar gönderilirse güncellenir, başka hesapla giriş yapılırsa
+token o hesaba geçer. `422`: `fields.token` (20–4096 ASCII karakter, boşluksuz), `fields.platform` (`android`|`ios`).
+Sunucuda `FCM_CREDENTIALS_FILE` tanımlıysa hatırlatıcı zamanı gelince kullanıcının tüm cihazlarına push gönderilir;
+FCM'in artık geçersiz dediği token'lar silinir.
+
+### `DELETE /devices/{token}` (auth) → `204`
+Yalnızca kendi cihazınızı siler (çıkışta çağrılır). Başka kullanıcının token'ı için de `204` döner ama hiçbir şey silinmez.
+
 ---
 
 ## Belgeler

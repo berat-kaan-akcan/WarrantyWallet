@@ -326,3 +326,13 @@ type AuthToken struct {
 	UsedAt    *time.Time
 	CreatedAt time.Time
 }
+
+// DeviceToken is the push (FCM) registration of one app install. A token belongs to the user
+// who registered it last.
+type DeviceToken struct {
+	Token      string    `json:"-"`
+	UserID     string    `json:"-"`
+	Platform   string    `json:"platform"` // android | ios
+	CreatedAt  time.Time `json:"created_at"`
+	LastSeenAt time.Time `json:"last_seen_at"`
+}

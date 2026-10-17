@@ -25,6 +25,7 @@ type Store struct {
 	logs       []domain.ExtractionLog
 	categories map[string]domain.Category
 	tokens     map[string]domain.AuthToken // by hash
+	devices    map[string]domain.DeviceToken
 	now        func() time.Time
 }
 
@@ -36,8 +37,8 @@ func New() *Store {
 		users: map[string]domain.User{}, products: map[string]domain.Product{},
 		documents: map[string]domain.Document{}, services: map[string]domain.ServiceRecord{}, events: map[string][]domain.ServiceEvent{},
 		notifs: map[string]domain.Notification{}, categories: map[string]domain.Category{},
-		tokens: map[string]domain.AuthToken{},
-		now:    time.Now,
+		tokens: map[string]domain.AuthToken{}, devices: map[string]domain.DeviceToken{},
+		now: time.Now,
 	}
 	for _, c := range domain.DefaultCategories {
 		s.categories[c.Slug] = c
@@ -145,6 +146,11 @@ func (s *Store) DeleteUser(_ context.Context, id string) error {
 	for h, t := range s.tokens {
 		if t.UserID == id {
 			delete(s.tokens, h)
+		}
+	}
+	for k, d := range s.devices {
+		if d.UserID == id {
+			delete(s.devices, k)
 		}
 	}
 	for k, p := range s.products {
@@ -624,4 +630,48 @@ func (s *Store) DeleteCategory(_ context.Context, slug string) error {
 	}
 	delete(s.categories, slug)
 	return nil
+}
+
+// ---- device tokens ----
+
+// SaveDeviceToken upserts a push token.
+func (s *Store) SaveDeviceToken(_ context.Context, d *domain.DeviceToken) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.users[d.UserID]; !ok {
+		return domain.ErrNotFound
+	}
+	now := s.now().UTC()
+	if old, ok := s.devices[d.Token]; ok {
+		d.CreatedAt = old.CreatedAt
+	} else {
+		d.CreatedAt = now
+	}
+	d.LastSeenAt = now
+	s.devices[d.Token] = *d
+	return nil
+}
+
+// DeleteDeviceToken removes a token (missing tokens are not an error).
+func (s *Store) DeleteDeviceToken(_ context.Context, userID, token string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if d, ok := s.devices[token]; ok && (userID == "" || d.UserID == userID) {
+		delete(s.devices, token)
+	}
+	return nil
+}
+
+// ListDeviceTokens returns a user's tokens, most recently seen first.
+func (s *Store) ListDeviceTokens(_ context.Context, userID string) ([]domain.DeviceToken, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var out []domain.DeviceToken
+	for _, d := range s.devices {
+		if d.UserID == userID {
+			out = append(out, d)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].LastSeenAt.After(out[j].LastSeenAt) })
+	return out, nil
 }

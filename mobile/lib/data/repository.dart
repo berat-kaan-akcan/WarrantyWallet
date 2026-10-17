@@ -30,6 +30,8 @@ abstract class WarrantyRepository {
   Future<AppUser> updateProfile({required String name});
   Future<void> deleteAccount();
   Future<void> logout(String? refreshToken);
+  Future<void> registerDevice(String token, String platform);
+  Future<void> unregisterDevice(String token);
   Future<void> forgotPassword(String email);
 
   /// Mails a new verification link; returns false when already verified.
@@ -125,6 +127,15 @@ class ApiWarrantyRepository implements WarrantyRepository {
   Future<void> logout(String? refreshToken) async {
     await api.post('/auth/logout', {'refresh_token': refreshToken ?? ''});
   }
+
+  @override
+  Future<void> registerDevice(String token, String platform) async {
+    await api.post('/devices', {'token': token, 'platform': platform});
+  }
+
+  @override
+  Future<void> unregisterDevice(String token) =>
+      api.delete('/devices/${Uri.encodeComponent(token)}');
 
   @override
   Future<bool> resendVerification() async =>

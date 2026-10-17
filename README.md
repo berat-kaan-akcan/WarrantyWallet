@@ -91,6 +91,12 @@ verilirse belgeler S3 uyumlu bir depoda (MinIO, AWS S3, Cloudflare R2) tutulur. 
 `S3_ENDPOINT=http://minio:9000`, `S3_BUCKET=warranty`, `S3_ACCESS_KEY=warranty`, `S3_SECRET_KEY=warranty-dev-secret`
 verip `docker compose --profile s3 up --build` çalıştırın (kova otomatik oluşturulur).
 
+Push bildirimleri (FCM): `FCM_CREDENTIALS_FILE` bir Firebase servis hesabı JSON dosyasını gösterirse hatırlatıcılar
+telefonlara push olarak da gönderilir. Dosyayı repoya koymayın. Mobil tarafta Firebase projesi bağlanana kadar
+`NoopPushService` kullanılır ve hatırlatıcılar cihazdaki yerel bildirimlerle gelir; bağlamak için
+`firebase_core` + `firebase_messaging` ekleyip `google-services.json` / `GoogleService-Info.plist` dosyalarını koyun ve
+`pushServiceProvider`'ı `FirebaseMessaging.instance.getToken()` döndüren bir sınıfla değiştirin.
+
 ### 3) Mobil uygulamayı çalıştırma
 ```bash
 cd mobile

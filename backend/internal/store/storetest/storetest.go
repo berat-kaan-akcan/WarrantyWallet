@@ -47,6 +47,52 @@ func Run(t *testing.T, newStore func(t *testing.T) store.Store) {
 		}
 	})
 
+	t.Run("device_tokens", func(t *testing.T) {
+		s := newStore(t)
+		a, b := mkUser(t, s, "dev-a@x.io"), mkUser(t, s, "dev-b@x.io")
+		if err := s.SaveDeviceToken(ctx, &domain.DeviceToken{UserID: a, Token: "tok-1", Platform: "android"}); err != nil {
+			t.Fatal(err)
+		}
+		d := &domain.DeviceToken{UserID: a, Token: "tok-2", Platform: "ios"}
+		if err := s.SaveDeviceToken(ctx, d); err != nil || d.CreatedAt.IsZero() {
+			t.Fatalf("save %v %+v", err, d)
+		}
+		if list, _ := s.ListDeviceTokens(ctx, a); len(list) != 2 {
+			t.Fatalf("list %+v", list)
+		}
+		// same install signs in as b → token moves
+		if err := s.SaveDeviceToken(ctx, &domain.DeviceToken{UserID: b, Token: "tok-1", Platform: "android"}); err != nil {
+			t.Fatal(err)
+		}
+		if list, _ := s.ListDeviceTokens(ctx, a); len(list) != 1 || list[0].Token != "tok-2" || list[0].Platform != "ios" {
+			t.Fatalf("after move a %+v", list)
+		}
+		if err := s.DeleteDeviceToken(ctx, a, "tok-1"); err != nil { // not a's token any more
+			t.Fatal(err)
+		}
+		if list, _ := s.ListDeviceTokens(ctx, b); len(list) != 1 {
+			t.Fatalf("other user's token deleted %+v", list)
+		}
+		_ = s.DeleteDeviceToken(ctx, "", "tok-1")
+		_ = s.DeleteDeviceToken(ctx, a, "tok-2")
+		if l1, _ := s.ListDeviceTokens(ctx, a); len(l1) != 0 {
+			t.Fatalf("a %+v", l1)
+		}
+		if l2, _ := s.ListDeviceTokens(ctx, b); len(l2) != 0 {
+			t.Fatalf("b %+v", l2)
+		}
+		if err := s.SaveDeviceToken(ctx, &domain.DeviceToken{UserID: domain.NewID(), Token: "x", Platform: "ios"}); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatalf("unknown user %v", err)
+		}
+		_ = s.SaveDeviceToken(ctx, &domain.DeviceToken{UserID: a, Token: "tok-3", Platform: "android"})
+		if err := s.DeleteUser(ctx, a); err != nil {
+			t.Fatal(err)
+		}
+		if l, _ := s.ListDeviceTokens(ctx, a); len(l) != 0 {
+			t.Fatalf("tokens survive user deletion %+v", l)
+		}
+	})
+
 	t.Run("profile_password_and_tokens", func(t *testing.T) {
 		s := newStore(t)
 		a := mkUser(t, s, "tok@x.io")

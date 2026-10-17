@@ -121,6 +121,39 @@ void main() {
       expect(tokens.token, isNull);
       expect(tokens.refreshToken, isNull);
     });
+
+    test('registers the push token after login and drops it on logout',
+        () async {
+      final repo = FakeRepository();
+      final container = ProviderContainer(overrides: [
+        repositoryProvider.overrideWithValue(repo),
+        tokenStoreProvider.overrideWithValue(MemoryTokenStore()),
+        pushServiceProvider.overrideWithValue(FakePushService('fcm-token-1')),
+      ]);
+      addTearDown(container.dispose);
+      final auth = container.read(authControllerProvider.notifier);
+      await auth.login('berat@test.io', 'supersecret');
+      await Future<void>.delayed(Duration.zero);
+      expect(repo.calls, contains('device+:fcm-token-1:android'));
+      await auth.logout();
+      expect(repo.calls,
+          containsAllInOrder(['device-:fcm-token-1', 'logout:rtok']));
+    });
+
+    test('no push token → nothing registered', () async {
+      final repo = FakeRepository();
+      final container = ProviderContainer(overrides: [
+        repositoryProvider.overrideWithValue(repo),
+        tokenStoreProvider.overrideWithValue(MemoryTokenStore()),
+        pushServiceProvider.overrideWithValue(FakePushService()),
+      ]);
+      addTearDown(container.dispose);
+      await container
+          .read(authControllerProvider.notifier)
+          .login('berat@test.io', 'supersecret');
+      await Future<void>.delayed(Duration.zero);
+      expect(repo.calls.where((c) => c.startsWith('device')), isEmpty);
+    });
   });
 
   testWidgets('password reset: request code, then set new password',

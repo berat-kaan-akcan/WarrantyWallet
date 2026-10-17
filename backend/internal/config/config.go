@@ -39,6 +39,8 @@ type Config struct {
 	S3AccessKey     string
 	S3SecretKey     string
 	S3PathStyle     bool
+	// FCMCredentialsFile is the path of a Firebase service-account JSON (never commit it).
+	FCMCredentialsFile string
 }
 
 // Load reads configuration from the environment (getenv is injectable for tests).
@@ -47,32 +49,33 @@ func Load(getenv func(string) string) (Config, error) {
 		getenv = os.Getenv
 	}
 	c := Config{
-		HTTPAddr:      def(getenv("HTTP_ADDR"), ":8080"),
-		DatabaseURL:   getenv("DATABASE_URL"),
-		JWTSecret:     getenv("JWT_SECRET"),
-		TokenTTL:      dur(getenv("TOKEN_TTL"), time.Hour),
-		RefreshTTL:    dur(getenv("REFRESH_TTL"), 30*24*time.Hour),
-		TrustProxy:    strings.EqualFold(strings.TrimSpace(getenv("TRUST_PROXY")), "true"),
-		StorageDir:    def(getenv("STORAGE_DIR"), "./uploads"),
-		MaxUploadMB:   int64(num(getenv("MAX_UPLOAD_MB"), 10)),
-		GeminiAPIKey:  strings.TrimSpace(getenv("GEMINI_API_KEY")),
-		GeminiModel:   def(getenv("GEMINI_MODEL"), "gemini-3.5-flash"),
-		GeminiBaseURL: def(getenv("GEMINI_BASE_URL"), "https://generativelanguage.googleapis.com/v1beta"),
-		GeminiTimeout: dur(getenv("GEMINI_TIMEOUT"), 25*time.Second),
-		CORSOrigins:   def(getenv("CORS_ORIGINS"), "*"),
-		NotifyEvery:   dur(getenv("NOTIFY_INTERVAL"), 15*time.Minute),
-		PublicBaseURL: strings.TrimRight(def(getenv("PUBLIC_BASE_URL"), "http://localhost:8080"), "/"),
-		SMTPHost:      strings.TrimSpace(getenv("SMTP_HOST")),
-		SMTPPort:      num(getenv("SMTP_PORT"), 587),
-		SMTPUsername:  strings.TrimSpace(getenv("SMTP_USERNAME")),
-		SMTPPassword:  getenv("SMTP_PASSWORD"),
-		SMTPFrom:      strings.TrimSpace(getenv("SMTP_FROM")),
-		S3Endpoint:    strings.TrimSpace(getenv("S3_ENDPOINT")),
-		S3Bucket:      strings.TrimSpace(getenv("S3_BUCKET")),
-		S3Region:      def(getenv("S3_REGION"), "us-east-1"),
-		S3AccessKey:   strings.TrimSpace(getenv("S3_ACCESS_KEY")),
-		S3SecretKey:   getenv("S3_SECRET_KEY"),
-		S3PathStyle:   !strings.EqualFold(strings.TrimSpace(getenv("S3_PATH_STYLE")), "false"),
+		HTTPAddr:           def(getenv("HTTP_ADDR"), ":8080"),
+		DatabaseURL:        getenv("DATABASE_URL"),
+		JWTSecret:          getenv("JWT_SECRET"),
+		TokenTTL:           dur(getenv("TOKEN_TTL"), time.Hour),
+		RefreshTTL:         dur(getenv("REFRESH_TTL"), 30*24*time.Hour),
+		TrustProxy:         strings.EqualFold(strings.TrimSpace(getenv("TRUST_PROXY")), "true"),
+		StorageDir:         def(getenv("STORAGE_DIR"), "./uploads"),
+		MaxUploadMB:        int64(num(getenv("MAX_UPLOAD_MB"), 10)),
+		GeminiAPIKey:       strings.TrimSpace(getenv("GEMINI_API_KEY")),
+		GeminiModel:        def(getenv("GEMINI_MODEL"), "gemini-3.5-flash"),
+		GeminiBaseURL:      def(getenv("GEMINI_BASE_URL"), "https://generativelanguage.googleapis.com/v1beta"),
+		GeminiTimeout:      dur(getenv("GEMINI_TIMEOUT"), 25*time.Second),
+		CORSOrigins:        def(getenv("CORS_ORIGINS"), "*"),
+		NotifyEvery:        dur(getenv("NOTIFY_INTERVAL"), 15*time.Minute),
+		PublicBaseURL:      strings.TrimRight(def(getenv("PUBLIC_BASE_URL"), "http://localhost:8080"), "/"),
+		SMTPHost:           strings.TrimSpace(getenv("SMTP_HOST")),
+		SMTPPort:           num(getenv("SMTP_PORT"), 587),
+		SMTPUsername:       strings.TrimSpace(getenv("SMTP_USERNAME")),
+		SMTPPassword:       getenv("SMTP_PASSWORD"),
+		SMTPFrom:           strings.TrimSpace(getenv("SMTP_FROM")),
+		S3Endpoint:         strings.TrimSpace(getenv("S3_ENDPOINT")),
+		S3Bucket:           strings.TrimSpace(getenv("S3_BUCKET")),
+		S3Region:           def(getenv("S3_REGION"), "us-east-1"),
+		S3AccessKey:        strings.TrimSpace(getenv("S3_ACCESS_KEY")),
+		S3SecretKey:        getenv("S3_SECRET_KEY"),
+		FCMCredentialsFile: strings.TrimSpace(getenv("FCM_CREDENTIALS_FILE")),
+		S3PathStyle:        !strings.EqualFold(strings.TrimSpace(getenv("S3_PATH_STYLE")), "false"),
 	}
 	if c.S3Bucket != "" && (c.S3Endpoint == "" || c.S3AccessKey == "" || c.S3SecretKey == "") {
 		return c, errors.New("S3_ENDPOINT, S3_ACCESS_KEY and S3_SECRET_KEY are required when S3_BUCKET is set")

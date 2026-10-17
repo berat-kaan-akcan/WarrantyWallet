@@ -22,6 +22,7 @@ import (
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/httpapi"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/mail"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/notify"
+	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/push"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/storage"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/store"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/store/memory"
@@ -130,6 +131,16 @@ func run(logger *slog.Logger) error {
 	}
 
 	worker := &notify.Worker{Store: st, Interval: cfg.NotifyEvery, Logger: logger}
+	if cfg.FCMCredentialsFile != "" {
+		fcm, err := push.LoadFCM(cfg.FCMCredentialsFile)
+		if err != nil {
+			return err
+		}
+		worker.Send = (&push.Notifier{Store: st, Sender: fcm, Logger: logger}).Deliver
+		logger.Info("fcm push enabled", "project", fcm.ProjectID)
+	} else {
+		logger.Warn("FCM_CREDENTIALS_FILE not set: reminders are only shown in the app")
+	}
 	go worker.Run(ctx)
 
 	httpServer := &http.Server{

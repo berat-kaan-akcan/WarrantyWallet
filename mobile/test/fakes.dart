@@ -4,6 +4,7 @@ import 'package:warranty_wallet/core/api_client.dart';
 import 'package:warranty_wallet/core/warranty.dart';
 import 'package:warranty_wallet/data/repository.dart';
 import 'package:warranty_wallet/models/models.dart';
+import 'package:warranty_wallet/services/services.dart';
 
 const testUser =
     AppUser(id: 'u1', email: 'berat@test.io', name: 'Berat Kaan', role: 'user');
@@ -99,6 +100,14 @@ class FakeRepository implements WarrantyRepository {
   @override
   Future<void> logout(String? refreshToken) async =>
       calls.add('logout:$refreshToken');
+
+  @override
+  Future<void> registerDevice(String token, String platform) async =>
+      calls.add('device+:$token:$platform');
+
+  @override
+  Future<void> unregisterDevice(String token) async =>
+      calls.add('device-:$token');
 
   @override
   Future<void> forgotPassword(String email) async => calls.add('forgot:$email');
@@ -310,4 +319,15 @@ class FakeRepository implements WarrantyRepository {
         ],
         upcoming: [headphones],
       );
+}
+
+class FakePushService implements PushService {
+  FakePushService([this.value]);
+  final String? value;
+
+  @override
+  Future<String?> token() async => value;
+
+  @override
+  String get platform => 'android';
 }

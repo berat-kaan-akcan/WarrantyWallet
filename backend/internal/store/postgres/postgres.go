@@ -768,3 +768,54 @@ func validUUID(s string) bool {
 	}
 	return true
 }
+
+// ---- device tokens ----
+
+// SaveDeviceToken upserts a push token; the token moves to the user registering it.
+func (s *Store) SaveDeviceToken(ctx context.Context, d *domain.DeviceToken) error {
+	if !validUUID(d.UserID) {
+		return domain.ErrNotFound
+	}
+	err := s.db.QueryRowContext(ctx, `INSERT INTO device_tokens (token, user_id, platform) VALUES ($1,$2,$3)
+		ON CONFLICT (token) DO UPDATE SET user_id=EXCLUDED.user_id, platform=EXCLUDED.platform, last_seen_at=now()
+		RETURNING created_at, last_seen_at`, d.Token, d.UserID, d.Platform).Scan(&d.CreatedAt, &d.LastSeenAt)
+	if isFKViolation(err) {
+		return domain.ErrNotFound
+	}
+	return err
+}
+
+// DeleteDeviceToken removes a token; userID "" ignores the owner.
+func (s *Store) DeleteDeviceToken(ctx context.Context, userID, token string) error {
+	if userID == "" {
+		_, err := s.db.ExecContext(ctx, `DELETE FROM device_tokens WHERE token=$1`, token)
+		return err
+	}
+	if !validUUID(userID) {
+		return nil
+	}
+	_, err := s.db.ExecContext(ctx, `DELETE FROM device_tokens WHERE token=$1 AND user_id=$2`, token, userID)
+	return err
+}
+
+// ListDeviceTokens returns a user's tokens, most recently seen first.
+func (s *Store) ListDeviceTokens(ctx context.Context, userID string) ([]domain.DeviceToken, error) {
+	if !validUUID(userID) {
+		return nil, nil
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT token, user_id, platform, created_at, last_seen_at FROM device_tokens
+		WHERE user_id=$1 ORDER BY last_seen_at DESC, token`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.DeviceToken
+	for rows.Next() {
+		var d domain.DeviceToken
+		if err := rows.Scan(&d.Token, &d.UserID, &d.Platform, &d.CreatedAt, &d.LastSeenAt); err != nil {
+			return nil, err
+		}
+		out = append(out, d)
+	}
+	return out, rows.Err()
+}

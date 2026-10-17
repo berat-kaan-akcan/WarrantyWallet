@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/api_client.dart';
@@ -10,6 +12,7 @@ final tokenStoreProvider = Provider<TokenStore>((ref) => SecureTokenStore());
 final ocrServiceProvider = Provider<OcrService>((ref) => MlKitOcrService());
 final reminderSchedulerProvider =
     Provider<ReminderScheduler>((ref) => LocalReminderScheduler());
+final pushServiceProvider = Provider<PushService>((ref) => NoopPushService());
 
 final repositoryProvider = Provider<WarrantyRepository>((ref) {
   final tokens = ref.watch(tokenStoreProvider);
@@ -101,6 +104,7 @@ class AuthController extends StateNotifier<AuthState> {
       final user = await _repo.me();
       if (!mounted) return;
       state = AuthState(user: user, initialized: true);
+      unawaited(_registerPush());
     } on ApiException catch (e) {
       if (e.isUnauthorized) await _tokens.clear();
       if (!mounted) return;
@@ -122,6 +126,7 @@ class AuthController extends StateNotifier<AuthState> {
       await _tokens.write(session.token, refreshToken: session.refreshToken);
       if (!mounted) return false;
       state = AuthState(user: session.user, initialized: true);
+      unawaited(_registerPush());
       return true;
     } on ApiException catch (e) {
       if (!mounted) return false;
@@ -130,9 +135,26 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
+  String? _pushToken;
+
+  /// Registers this install for server push. Best effort: reminders still arrive as local
+  /// notifications when push is unavailable.
+  Future<void> _registerPush() async {
+    final push = _ref.read(pushServiceProvider);
+    try {
+      final token = await push.token();
+      if (token == null || token.isEmpty) return;
+      await _repo.registerDevice(token, push.platform);
+      _pushToken = token;
+    } catch (_) {}
+  }
+
   Future<void> logout() async {
     final rt = await _tokens.readRefresh();
+    final push = _pushToken;
+    _pushToken = null;
     try {
+      if (push != null) await _repo.unregisterDevice(push);
       await _repo.logout(rt);
     } on ApiException {
       // Signing out locally must work offline too.

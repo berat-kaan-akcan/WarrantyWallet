@@ -34,7 +34,8 @@ class FakePicker implements ReceiptImagePicker {
 List<Override> overrides(FakeRepository repo,
     {String? token,
     FakeReminderScheduler? scheduler,
-    FakeCodeScanner? scanner}) {
+    FakeCodeScanner? scanner,
+    PushService? push}) {
   final tokens = MemoryTokenStore()..token = token;
   return [
     repositoryProvider.overrideWithValue(repo),
@@ -44,6 +45,7 @@ List<Override> overrides(FakeRepository repo,
         .overrideWithValue(scheduler ?? FakeReminderScheduler()),
     imageSourceProvider.overrideWithValue(FakePicker()),
     codeScannerProvider.overrideWithValue(scanner ?? FakeCodeScanner()),
+    pushServiceProvider.overrideWithValue(push ?? FakePushService()),
   ];
 }
 

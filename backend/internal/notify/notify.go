@@ -1,6 +1,6 @@
 // Package notify plans warranty-expiry reminders (90/30/7 days before) and runs a worker
-// that marks due reminders as sent. V1 delivery happens on the device (local notifications);
-// the Sender hook is where FCM/e-mail push will be plugged in for V2.
+// that marks due reminders as sent. The device also schedules local notifications; when FCM is
+// configured, Worker.Send is push.Notifier.Deliver.
 package notify
 
 import (
@@ -73,7 +73,7 @@ func Sync(ctx context.Context, s store.Store, p domain.Product, now time.Time) e
 	return s.ReplaceNotifications(ctx, p.UserID, p.ID, Plan(p, now))
 }
 
-// Sender delivers a reminder (V2: FCM push / e-mail). nil → just mark as sent.
+// Sender delivers a reminder (FCM push). nil → just mark as sent.
 type Sender func(ctx context.Context, n domain.Notification) error
 
 // Worker periodically processes due reminders.
