@@ -294,6 +294,7 @@ func (s *Server) handleServicePack(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var sr *domain.ServiceRecord
+	var events []domain.ServiceEvent
 	if id := r.URL.Query().Get("service_record_id"); id != "" {
 		rec, err := s.Store.GetServiceRecord(r.Context(), u.ID, id)
 		if err != nil || rec.ProductID != p.ID {
@@ -301,6 +302,10 @@ func (s *Server) handleServicePack(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		sr = &rec
+		if events, err = s.Store.ListServiceEvents(r.Context(), u.ID, rec.ID); err != nil {
+			s.storeError(w, err)
+			return
+		}
 	}
 	docs, err := s.Store.ListDocuments(r.Context(), u.ID, p.ID)
 	if err != nil {
@@ -318,7 +323,7 @@ func (s *Server) handleServicePack(w http.ResponseWriter, r *http.Request) {
 	if owner == "" {
 		owner = u.Email
 	}
-	b, err := pdf.ServicePack(p, sr, atts, s.today(), owner)
+	b, err := pdf.ServicePack(p, sr, events, atts, s.today(), owner)
 	if err != nil {
 		s.storeError(w, err)
 		return

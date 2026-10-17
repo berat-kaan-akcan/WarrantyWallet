@@ -57,7 +57,8 @@ func ProblemLabel(p domain.ProblemType) string {
 
 // ServicePack builds the PDF: a cover page with product + warranty info + checklist
 // (+ optional latest service record), followed by one page per image document.
-func ServicePack(p domain.Product, sr *domain.ServiceRecord, atts []Attachment, today domain.Date, owner string) ([]byte, error) {
+// events is the service record's status timeline (oldest first); it may be nil.
+func ServicePack(p domain.Product, sr *domain.ServiceRecord, events []domain.ServiceEvent, atts []Attachment, today domain.Date, owner string) ([]byte, error) {
 	d := New("Servis Belge Paketi - " + p.Name)
 	d.AddPage()
 	d.Rect(0, 0, PageW, 70, 0.93)
@@ -65,7 +66,15 @@ func ServicePack(p domain.Product, sr *domain.ServiceRecord, atts []Attachment, 
 	d.Text(40, 60, 9, false, "Olusturulma: "+time.Now().Format("02.01.2006 15:04"))
 
 	y := 110.0
+	// room starts a new page when the next block would not fit.
+	room := func(h float64) {
+		if y+h > PageH-40 {
+			d.AddPage()
+			y = 60
+		}
+	}
 	row := func(label, value string) {
+		room(20)
 		d.Text(40, y, 11, true, label)
 		d.Text(200, y, 11, false, value)
 		y += 20
@@ -102,8 +111,34 @@ func ServicePack(p domain.Product, sr *domain.ServiceRecord, atts []Attachment, 
 			d.Text(40, y, 11, true, "Açıklama")
 			y = d.Wrap(200, y, 11, 60, sr.Description) + 6
 		}
+		row("Durum", ServiceStatusLabel(sr.Status))
 		if sr.ServiceName != "" {
 			row("Servis", sr.ServiceName)
+		}
+		if !sr.ServiceDate.IsZero() {
+			row("Servis tarihi", fmtDate(sr.ServiceDate))
+		}
+		if sr.Cost > 0 {
+			row("Onarım ücreti", formatMoney(sr.Cost)+" "+p.Currency)
+		} else if sr.Status.Closed() {
+			row("Onarım ücreti", "Ücretsiz / girilmedi")
+		}
+		if sr.ResolvedAt != nil {
+			row("Kapanış", sr.ResolvedAt.In(trt).Format("02.01.2006"))
+		}
+		if len(events) > 0 {
+			y += 6
+			room(24)
+			d.Text(40, y, 12, true, "Servis süreci")
+			y += 20
+			for _, e := range events {
+				room(18)
+				line := e.CreatedAt.In(trt).Format("02.01.2006 15:04") + "  " + ServiceStatusLabel(e.Status)
+				if e.Note != "" {
+					line += " - " + e.Note
+				}
+				y = d.Wrap(48, y, 10, 90, line) + 2
+			}
 		}
 	}
 
@@ -114,6 +149,7 @@ func ServicePack(p domain.Product, sr *domain.ServiceRecord, atts []Attachment, 
 	for _, a := range atts {
 		docs = append(docs, a.Doc)
 	}
+	room(24 + 18*5)
 	d.Text(40, y, 14, true, "Belge kontrol listesi")
 	y += 24
 	for _, c := range Checklist(p, docs) {
@@ -150,6 +186,24 @@ func ServicePack(p domain.Product, sr *domain.ServiceRecord, atts []Attachment, 
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+// trt is Türkiye time, used for timestamps printed in the pack.
+var trt = time.FixedZone("TRT", 3*3600)
+
+// ServiceStatusLabel is the Turkish label of a service status.
+func ServiceStatusLabel(s domain.ServiceStatus) string {
+	switch s {
+	case domain.ServiceOpen:
+		return "Açık"
+	case domain.ServiceInService:
+		return "Serviste"
+	case domain.ServiceResolved:
+		return "Çözüldü"
+	case domain.ServiceCancelled:
+		return "İptal"
+	}
+	return string(s)
 }
 
 func docTitle(t domain.DocumentType) string {

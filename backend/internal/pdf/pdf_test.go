@@ -2,6 +2,7 @@ package pdf
 
 import (
 	"bytes"
+	"fmt"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -11,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/domain"
 )
@@ -92,12 +94,19 @@ func TestServicePack(t *testing.T) {
 	p := domain.Product{Name: "ASUS TUF VG27AQ", Brand: "ASUS", Model: "VG27AQ", Seller: "MediaMarkt", SerialNumber: "M1LMQS",
 		PurchaseDate: domain.NewDate(2026, 9, 12), Price: 12499, Currency: "TRY", WarrantyMonths: 24}
 	p.Normalize()
-	sr := &domain.ServiceRecord{Problem: domain.ProblemScreenLines, Description: "Ekranın sol tarafında dikey çizgiler var."}
+	resolved := time.Date(2026, 10, 20, 9, 0, 0, 0, time.UTC)
+	sr := &domain.ServiceRecord{Problem: domain.ProblemScreenLines, Description: "Ekranın sol tarafında dikey çizgiler var.",
+		Status: domain.ServiceResolved, ServiceName: "ASUS Yetkili Servis", Cost: 750, ResolvedAt: &resolved}
+	var events []domain.ServiceEvent
+	for i := 0; i < 40; i++ { // long timeline must flow onto a new page
+		events = append(events, domain.ServiceEvent{Status: domain.ServiceInService, Note: fmt.Sprintf("adim %d", i),
+			CreatedAt: time.Date(2026, 10, 17, 10, i, 0, 0, time.UTC)})
+	}
 	atts := []Attachment{
 		{Doc: domain.Document{Type: domain.DocInvoice, ContentType: "image/jpeg", OriginalName: "fatura.jpg"}, Data: testImage(t, "jpeg")},
 		{Doc: domain.Document{Type: domain.DocWarranty, ContentType: "application/pdf", OriginalName: "garanti.pdf"}, Data: []byte("%PDF")},
 	}
-	b, err := ServicePack(p, sr, atts, domain.NewDate(2026, 10, 16), "Berat")
+	b, err := ServicePack(p, sr, events, atts, domain.NewDate(2026, 10, 16), "Berat")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +115,7 @@ func TestServicePack(t *testing.T) {
 		_ = os.WriteFile(out, b, 0o644)
 	}
 	s := string(b)
-	for _, want := range []string{"/Count 2", "ASUS TUF VG27AQ", "12.499,00 TRY", "12.09.2028", "Ekranda \xe7izgiler", "garanti.pdf", "[ X ]  Fatura"} {
+	for _, want := range []string{"/Count 3", "ASUS TUF VG27AQ", "750,00 TRY", "Servis s\xfcreci", "17.10.2026 13:00 Serviste - adim 0", "adim 39", "20.10.2026", "12.499,00 TRY", "12.09.2028", "Ekranda \xe7izgiler", "garanti.pdf", "[ X ]  Fatura"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("pack missing %q", want)
 		}
