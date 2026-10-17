@@ -67,3 +67,33 @@ func TestDiagnose(t *testing.T) {
 		}
 	}
 }
+
+func TestAdminAIStats(t *testing.T) {
+	h := newHarness(t)
+	admin := h.register("admin@ww.test", "A")
+	tok := h.register("ai@example.com", "U")
+	p := h.do("POST", "/api/v1/products", tok, map[string]any{"name": "TV", "purchase_date": "2026-01-10"}).json(t)
+	path := "/api/v1/products/" + p["id"].(string) + "/diagnose"
+	h.api.Assistant = assist.Assistant{Gemini: fakeGenerator{raw: `{"summary":"s","likely_causes":[{"cause":"c","likelihood":"high"}],"steps":[{"title":"t"}],"recommend_service":false}`}}
+	h.do("POST", path, tok, map[string]any{"problem": "wont_turn_on", "description": "gizli açıklama"})
+	h.api.Assistant = assist.Assistant{Gemini: fakeGenerator{err: errors.New("503")}}
+	h.do("POST", path, tok, map[string]any{"problem": "wont_turn_on"})
+	h.api.Assistant = assist.Assistant{}
+	h.do("POST", path, tok, map[string]any{"problem": "wont_turn_on"})
+
+	st := h.do("GET", "/api/v1/admin/stats", admin, nil).json(t)
+	d := st["diagnoses"].(map[string]any)
+	if d["total"].(float64) != 3 || d["ai"].(float64) != 1 || d["rules"].(float64) != 2 || d["ai_failed"].(float64) != 1 || d["by_model"].(map[string]any)["gemini-fake"].(float64) != 1 {
+		t.Fatalf("diagnoses %v", d)
+	}
+	if st["extractions"].(map[string]any)["sample_size"].(float64) != 0 {
+		t.Fatalf("diagnoses counted as receipts: %v", st["extractions"])
+	}
+	r := h.do("GET", "/api/v1/admin/extraction-logs?kind=diagnosis", admin, nil)
+	if items := r.json(t)["items"].([]any); len(items) != 3 || strings.Contains(string(r.Body), "gizli") {
+		t.Fatalf("logs %s", r.Body)
+	}
+	if r := h.do("GET", "/api/v1/admin/extraction-logs?kind=x", admin, nil); r.Status != 422 {
+		t.Fatalf("bad kind %d", r.Status)
+	}
+}

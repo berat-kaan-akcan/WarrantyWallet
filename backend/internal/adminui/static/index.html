@@ -27,7 +27,7 @@
     <nav aria-label="Bölümler">
       <button type="button" data-tab="stats" aria-current="page">Özet</button>
       <button type="button" data-tab="users">Kullanıcılar</button>
-      <button type="button" data-tab="logs">Fiş okuma kayıtları</button>
+      <button type="button" data-tab="logs">Yapay zekâ kayıtları</button>
       <button type="button" data-tab="categories">Kategoriler</button>
     </nav>
 
@@ -36,6 +36,8 @@
       <div class="cards" id="stats-cards"></div>
       <h3>Sağlayıcıya göre fiş okuma</h3>
       <table><thead><tr><th scope="col">Sağlayıcı</th><th scope="col">Adet</th></tr></thead><tbody id="providers"></tbody></table>
+      <h3>Gemini modellerine göre yanıtlar</h3>
+      <table><thead><tr><th scope="col">Model</th><th scope="col">Fiş okuma</th><th scope="col">Arıza asistanı</th></tr></thead><tbody id="models"></tbody></table>
     </section>
 
     <section id="tab-users" aria-labelledby="users-title" hidden>
@@ -48,10 +50,19 @@
     </section>
 
     <section id="tab-logs" aria-labelledby="logs-title" hidden>
-      <h2 id="logs-title">Fiş okuma kayıtları</h2>
-      <label><input id="failures-only" type="checkbox"> Yalnızca hatalar</label>
+      <h2 id="logs-title">Yapay zekâ kayıtları</h2>
+      <div class="filters">
+        <label>Tür
+          <select id="log-kind">
+            <option value="">Tümü</option>
+            <option value="receipt">Fiş okuma</option>
+            <option value="diagnosis">Arıza asistanı</option>
+          </select>
+        </label>
+        <label><input id="failures-only" type="checkbox"> Yalnızca hatalar</label>
+      </div>
       <table>
-        <thead><tr><th scope="col">Zaman</th><th scope="col">Sağlayıcı</th><th scope="col">Sonuç</th><th scope="col">Hata</th></tr></thead>
+        <thead><tr><th scope="col">Zaman</th><th scope="col">Tür</th><th scope="col">Sağlayıcı</th><th scope="col">Sonuç</th><th scope="col">Hata</th></tr></thead>
         <tbody id="logs"></tbody>
       </table>
     </section>

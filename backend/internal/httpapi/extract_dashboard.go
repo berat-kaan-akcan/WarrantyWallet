@@ -58,7 +58,7 @@ func (s *Server) handleExtract(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	res, err := s.Extractor.Extract(ctx, in)
 	u := userFrom(r.Context())
-	logEntry := &domain.ExtractionLog{UserID: u.ID, Provider: res.Provider, Success: err == nil && len(res.Missing) < 4, RawText: truncate(in.Text, 4000)}
+	logEntry := &domain.ExtractionLog{UserID: u.ID, Kind: domain.LogReceipt, Provider: res.Provider, Model: res.Model, Success: err == nil && len(res.Missing) < 4, RawText: truncate(in.Text, 4000)}
 	if err != nil {
 		logEntry.Error = err.Error()
 	} else if len(res.Warnings) > 0 {

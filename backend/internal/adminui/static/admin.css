@@ -29,3 +29,5 @@ td.error { color: var(--danger); max-width: 420px; overflow-wrap: anywhere; }
 .card strong { display: block; font-size: 1.6rem; }
 .ok { color: var(--ok); }
 .bad { color: var(--danger); }
+select { font: inherit; padding: 8px 10px; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); }
+.filters { display: flex; gap: 16px; align-items: end; flex-wrap: wrap; }

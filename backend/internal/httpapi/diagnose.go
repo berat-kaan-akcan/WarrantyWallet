@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -56,6 +57,12 @@ func (s *Server) handleDiagnose(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.Logger.Info("diagnosis", "provider", d.Provider, "model", d.Model, "problem", in.Problem, "warnings", len(d.Warnings))
+	// The user's description is not stored; only provider/outcome for the admin statistics.
+	logEntry := &domain.ExtractionLog{UserID: u.ID, Kind: domain.LogDiagnosis, Provider: d.Provider, Model: d.Model,
+		Success: s.Assistant.Gemini == nil || d.Provider == "gemini", Error: truncate(strings.Join(d.Warnings, "; "), 500)}
+	if lerr := s.Store.CreateExtractionLog(r.Context(), logEntry); lerr != nil {
+		s.Logger.Warn("diagnosis log failed", "err", lerr)
+	}
 	// Internal error details stay in the log; clients only learn that AI was unavailable.
 	if len(d.Warnings) > 0 {
 		d.Warnings = []string{"ai_unavailable"}

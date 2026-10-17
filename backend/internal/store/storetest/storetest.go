@@ -340,14 +340,27 @@ func Run(t *testing.T, newStore func(t *testing.T) store.Store) {
 	t.Run("logs_and_categories", func(t *testing.T) {
 		s := newStore(t)
 		a := mkUser(t, s, "l@x.io")
-		_ = s.CreateExtractionLog(ctx, &domain.ExtractionLog{UserID: a, Provider: "gemini", Success: true})
+		_ = s.CreateExtractionLog(ctx, &domain.ExtractionLog{UserID: a, Provider: "gemini", Model: "gemini-3.5-flash", Success: true})
 		_ = s.CreateExtractionLog(ctx, &domain.ExtractionLog{UserID: a, Provider: "rules", Success: false, Error: "quota"})
 		fails, _ := s.ListExtractionLogs(ctx, true, 10)
 		if len(fails) != 1 || fails[0].Error != "quota" {
 			t.Fatalf("fails %v", fails)
 		}
+		if err := s.CreateExtractionLog(ctx, &domain.ExtractionLog{UserID: a, Kind: domain.LogDiagnosis, Provider: "gemini", Model: "m", Success: true}); err != nil {
+			t.Fatal(err)
+		}
 		all, _ := s.ListExtractionLogs(ctx, false, 10)
-		if len(all) != 2 {
+		kinds := map[string]int{}
+		for _, l := range all {
+			kinds[l.Kind]++
+			if l.Provider == "gemini" && l.Kind == domain.LogReceipt && l.Model != "gemini-3.5-flash" {
+				t.Fatalf("model not stored: %+v", l)
+			}
+		}
+		if kinds[domain.LogReceipt] != 2 || kinds[domain.LogDiagnosis] != 1 {
+			t.Fatalf("kinds %v", kinds)
+		}
+		if len(all) != 3 {
 			t.Fatal("all logs")
 		}
 		cats, _ := s.ListCategories(ctx)

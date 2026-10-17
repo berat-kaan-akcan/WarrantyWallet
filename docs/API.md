@@ -341,15 +341,15 @@ Zaman çizelgesi de silinir; kayda bağlı fotoğraflar ürünün belgeleri olar
 
 | Metot | Yol | Açıklama |
 |---|---|---|
-| GET | `/admin/stats` | `{"users":2,"products":1,"extractions":{"ok":7,"failed":1,"sample_size":8,"by_provider":{"gemini":6,"rules":1,"none":1}}}` |
+| GET | `/admin/stats` | `{"users":2,"products":1,"extractions":{"ok":7,"failed":1,"sample_size":8,"by_provider":{"gemini":6,"rules":1,"none":1},"by_model":{"gemini-3.5-flash":6}},"diagnoses":{"total":3,"ai":1,"rules":2,"ai_failed":1,"by_model":{"gemini-2.5-flash":1}}}` |
 | GET | `/admin/users` | `{"items":[user...]}` |
 | PATCH | `/admin/users/{id}` | `{"role":"admin"}` → güncel kullanıcı |
 | DELETE | `/admin/users/{id}` | `204` (kendini silemez) |
-| GET | `/admin/extraction-logs?failures=1` | Fiş okuma kayıtları (OCR hataları görünümü) |
+| GET | `/admin/extraction-logs?failures=1&kind=receipt\|diagnosis` | Yapay zekâ kayıtları: fiş okuma ve arıza asistanı (`kind`, `provider`, `model`, `success`, `error`). Arıza açıklamasının kendisi saklanmaz. |
 | POST | `/admin/categories` | `{"slug":"drone","name_tr":"Drone"}` → upsert |
 | DELETE | `/admin/categories/{slug}` | `204` |
 
 Admin olmayan kullanıcı `403 forbidden`, token yoksa `401` alır.
 
 ### Web yönetim paneli (V2): `GET /admin/`
-Backend ikili dosyasına gömülü, bağımlılıksız HTML/JS paneli: özet, kullanıcılar (arama, rol değiştirme, silme), fiş okuma kayıtları (yalnızca hatalar filtresi) ve kategoriler (ekle/güncelle/sil). Yalnızca yukarıdaki admin API'sini kullanır; yetki kontrolü API'dedir. Giriş `/auth/login` ile yapılır, admin olmayan hesap reddedilir. Token yalnızca sekme ömrü boyunca `sessionStorage`'da tutulur. Sıkı CSP (`script-src 'self'`, satır içi betik yok, `frame-ancestors 'none'`) uygulanır ve veriler yalnızca `textContent` ile yazılır. İlk yöneticiyi atamak için `ADMIN_EMAILS` ortam değişkeni kullanılır.
+Backend ikili dosyasına gömülü, bağımlılıksız HTML/JS paneli: özet, kullanıcılar (arama, rol değiştirme, silme), fiş okuma kayıtları (yalnızca hatalar filtresi) ve kategoriler (ekle/güncelle/sil). Yalnızca yukarıdaki admin API'sini kullanır; yetki kontrolü API'dedir. Giriş `/auth/login` ile yapılır, admin olmayan hesap reddedilir. Token'lar yalnızca sekme ömrü boyunca `sessionStorage`'da tutulur; süresi dolan access token refresh token ile bir kez yenilenir, çıkışta refresh token sunucuda da iptal edilir. Sıkı CSP (`script-src 'self'`, satır içi betik yok, `frame-ancestors 'none'`) uygulanır ve veriler yalnızca `textContent` ile yazılır. İlk yöneticiyi atamak için `ADMIN_EMAILS` ortam değişkeni kullanılır.

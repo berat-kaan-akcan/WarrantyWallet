@@ -263,12 +263,20 @@ type Notification struct {
 type ExtractionLog struct {
 	ID        string    `json:"id"`
 	UserID    string    `json:"user_id"`
+	Kind      string    `json:"kind"` // receipt | diagnosis (see LogReceipt, LogDiagnosis)
 	Provider  string    `json:"provider"`
+	Model     string    `json:"model,omitempty"`
 	Success   bool      `json:"success"`
 	Error     string    `json:"error,omitempty"`
 	RawText   string    `json:"raw_text,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+// AI log kinds.
+const (
+	LogReceipt   = "receipt"
+	LogDiagnosis = "diagnosis"
+)
 
 // Category is an admin-managed product category.
 type Category struct {

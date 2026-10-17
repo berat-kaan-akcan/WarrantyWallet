@@ -666,8 +666,11 @@ func (s *Store) CreateExtractionLog(ctx context.Context, l *domain.ExtractionLog
 	if l.UserID != "" {
 		uid = l.UserID
 	}
-	return s.db.QueryRowContext(ctx, `INSERT INTO extraction_logs (id, user_id, provider, success, error, raw_text)
-		VALUES ($1,$2,$3,$4,$5,$6) RETURNING created_at`, l.ID, uid, l.Provider, l.Success, l.Error, l.RawText).Scan(&l.CreatedAt)
+	if l.Kind == "" {
+		l.Kind = domain.LogReceipt
+	}
+	return s.db.QueryRowContext(ctx, `INSERT INTO extraction_logs (id, user_id, kind, provider, model, success, error, raw_text)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING created_at`, l.ID, uid, l.Kind, l.Provider, l.Model, l.Success, l.Error, l.RawText).Scan(&l.CreatedAt)
 }
 
 // ListExtractionLogs lists newest logs.
@@ -675,7 +678,7 @@ func (s *Store) ListExtractionLogs(ctx context.Context, onlyFailures bool, limit
 	if limit <= 0 {
 		limit = 100
 	}
-	q := `SELECT id, COALESCE(user_id::text,''), provider, success, error, raw_text, created_at FROM extraction_logs`
+	q := `SELECT id, COALESCE(user_id::text,''), kind, provider, model, success, error, raw_text, created_at FROM extraction_logs`
 	if onlyFailures {
 		q += ` WHERE NOT success`
 	}
@@ -687,7 +690,7 @@ func (s *Store) ListExtractionLogs(ctx context.Context, onlyFailures bool, limit
 	out := []domain.ExtractionLog{}
 	for rows.Next() {
 		var l domain.ExtractionLog
-		if err := rows.Scan(&l.ID, &l.UserID, &l.Provider, &l.Success, &l.Error, &l.RawText, &l.CreatedAt); err != nil {
+		if err := rows.Scan(&l.ID, &l.UserID, &l.Kind, &l.Provider, &l.Model, &l.Success, &l.Error, &l.RawText, &l.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, l)

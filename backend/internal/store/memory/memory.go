@@ -549,6 +549,9 @@ func (s *Store) CreateExtractionLog(_ context.Context, l *domain.ExtractionLog) 
 	if l.ID == "" {
 		l.ID = domain.NewID()
 	}
+	if l.Kind == "" {
+		l.Kind = domain.LogReceipt
+	}
 	l.CreatedAt = s.now().UTC()
 	s.logs = append(s.logs, *l)
 	return nil

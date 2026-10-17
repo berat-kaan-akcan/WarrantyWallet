@@ -14,11 +14,35 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 		s.storeError(w, err)
 		return
 	}
-	logs, _ := s.Store.ListExtractionLogs(r.Context(), false, 1000)
-	ok, failed := 0, 0
-	providers := map[string]int{}
+	logs, _ := s.Store.ListExtractionLogs(r.Context(), false, 2000)
+	ok, failed, receipts := 0, 0, 0
+	providers, models := map[string]int{}, map[string]int{}
+	diag := struct {
+		Total    int            `json:"total"`
+		AI       int            `json:"ai"`        // answered by Gemini
+		Rules    int            `json:"rules"`     // answered by the rule base
+		AIFailed int            `json:"ai_failed"` // Gemini configured but failed → rules
+		ByModel  map[string]int `json:"by_model"`
+	}{ByModel: map[string]int{}}
 	for _, l := range logs {
+		if l.Kind == domain.LogDiagnosis {
+			diag.Total++
+			if l.Provider == "gemini" {
+				diag.AI++
+				diag.ByModel[l.Model]++
+			} else {
+				diag.Rules++
+				if !l.Success {
+					diag.AIFailed++
+				}
+			}
+			continue
+		}
+		receipts++
 		providers[l.Provider]++
+		if l.Model != "" {
+			models[l.Model]++
+		}
 		if l.Success {
 			ok++
 		} else {
@@ -32,7 +56,8 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"users": len(users), "products": products,
-		"extractions": map[string]any{"ok": ok, "failed": failed, "by_provider": providers, "sample_size": len(logs)},
+		"extractions": map[string]any{"ok": ok, "failed": failed, "by_provider": providers, "by_model": models, "sample_size": receipts},
+		"diagnoses":   diag,
 	})
 }
 
@@ -93,12 +118,23 @@ func (s *Server) handleAdminDeleteUser(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleAdminExtractionLogs(w http.ResponseWriter, r *http.Request) {
 	only := r.URL.Query().Get("failures") == "1" || r.URL.Query().Get("failures") == "true"
-	logs, err := s.Store.ListExtractionLogs(r.Context(), only, 200)
+	kind := r.URL.Query().Get("kind")
+	if kind != "" && kind != domain.LogReceipt && kind != domain.LogDiagnosis {
+		writeError(w, http.StatusUnprocessableEntity, "validation_failed", "invalid filter", map[string]string{"kind": "receipt|diagnosis"})
+		return
+	}
+	logs, err := s.Store.ListExtractionLogs(r.Context(), only, 1000)
 	if err != nil {
 		s.storeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"items": logs})
+	out := make([]domain.ExtractionLog, 0, 200)
+	for _, l := range logs {
+		if (kind == "" || l.Kind == kind) && len(out) < 200 {
+			out = append(out, l)
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": out})
 }
 
 var slugRe = regexp.MustCompile(`^[a-z][a-z0-9_]{1,39}$`)

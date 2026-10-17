@@ -1,10 +1,12 @@
 // Warranty Wallet admin panel. All data is rendered with textContent (no HTML string parsing),
-// and the access token lives only in sessionStorage for the lifetime of the tab.
+// and the tokens live only in sessionStorage for the lifetime of the tab. An expired access token
+// is renewed once with the (rotating) refresh token before asking the admin to sign in again.
 'use strict';
 
 const API = '/api/v1';
 const $ = (id) => document.getElementById(id);
 let token = sessionStorage.getItem('ww_admin_token') || '';
+let refreshToken = sessionStorage.getItem('ww_admin_refresh') || '';
 let me = null;
 let users = [];
 
@@ -14,7 +16,39 @@ function say(text, isError = false) {
   m.className = isError ? 'error' : '';
 }
 
-async function api(method, path, body) {
+function saveTokens(res) {
+  token = res.token || '';
+  refreshToken = res.refresh_token || '';
+  sessionStorage.setItem('ww_admin_token', token);
+  sessionStorage.setItem('ww_admin_refresh', refreshToken);
+}
+
+// Turkish texts for API error codes the panel commonly sees.
+const MESSAGES = {
+  invalid_credentials: 'E-posta veya şifre hatalı.',
+  rate_limited: 'Çok fazla deneme yapıldı, biraz sonra tekrar deneyin.',
+  forbidden: 'Bu işlem için yönetici yetkisi gerekiyor.',
+  not_found: 'Kayıt bulunamadı.',
+};
+
+let refreshing = null;
+
+// renew exchanges the refresh token once; concurrent callers share the same attempt.
+function renew() {
+  if (!refreshToken) return Promise.resolve(false);
+  refreshing = refreshing || fetch(API + '/auth/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  }).then(async (res) => {
+    if (!res.ok) return false;
+    saveTokens(await res.json());
+    return true;
+  }).catch(() => false).finally(() => { refreshing = null; });
+  return refreshing;
+}
+
+async function api(method, path, body, retried = false) {
   const res = await fetch(API + path, {
     method,
     headers: Object.assign(
@@ -23,13 +57,15 @@ async function api(method, path, body) {
       body ? { 'Content-Type': 'application/json' } : {}),
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (res.status === 401) {
+  if (res.status === 401 && !path.startsWith('/auth/')) {
+    if (!retried && (await renew())) return api(method, path, body, true);
     logout('Oturum süresi doldu, tekrar giriş yapın.');
     throw new Error('unauthorized');
   }
   const data = res.status === 204 ? null : await res.json().catch(() => null);
   if (!res.ok) {
-    const msg = data && data.error ? data.error.message || data.error.code : 'HTTP ' + res.status;
+    const code = data && data.error ? data.error.code : '';
+    const msg = MESSAGES[code] || (data && data.error ? data.error.message || code : 'HTTP ' + res.status);
     throw new Error(msg);
   }
   return data;
@@ -65,8 +101,7 @@ async function login(ev) {
       say('Bu hesabın yönetici yetkisi yok.', true);
       return;
     }
-    token = res.token;
-    sessionStorage.setItem('ww_admin_token', token);
+    saveTokens(res);
     $('password').value = '';
     await start();
   } catch (e) {
@@ -74,10 +109,20 @@ async function login(ev) {
   }
 }
 
-function logout(text) {
+function logout(text, revoke = false) {
+  if (revoke && token && refreshToken) {
+    // Best effort: revoke the refresh token on the server too.
+    fetch(API + '/auth/logout', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    }).catch(() => {});
+  }
   token = '';
+  refreshToken = '';
   me = null;
   sessionStorage.removeItem('ww_admin_token');
+  sessionStorage.removeItem('ww_admin_refresh');
   $('app').hidden = true;
   $('who').hidden = true;
   $('login-view').hidden = false;
@@ -116,12 +161,15 @@ async function show(tab) {
 async function loadStats() {
   const s = await api('GET', '/admin/stats');
   const ex = s.extractions || {};
+  const dg = s.diagnoses || {};
   const rate = ex.sample_size ? Math.round((ex.ok / ex.sample_size) * 100) + '%' : '-';
   const cards = $('stats-cards');
   cards.replaceChildren();
   for (const [label, value] of [
     ['Kullanıcı', s.users], ['Ürün', s.products],
     ['Başarılı fiş okuma', ex.ok], ['Başarısız fiş okuma', ex.failed], ['Başarı oranı', rate],
+    ['Arıza asistanı kullanımı', dg.total], ['Gemini yanıtı', dg.ai], ['Kural tabanı yanıtı', dg.rules],
+    ['AI hatası (kurala düştü)', dg.ai_failed],
   ]) {
     const d = document.createElement('div');
     d.className = 'card';
@@ -136,6 +184,21 @@ async function loadStats() {
     const tr = document.createElement('tr');
     tr.append(cell(p), cell(n));
     rows.append(tr);
+  }
+  const mrows = $('models');
+  mrows.replaceChildren();
+  const seen = new Set([...Object.keys(ex.by_model || {}), ...Object.keys(dg.by_model || {})]);
+  for (const m of seen) {
+    const tr = document.createElement('tr');
+    tr.append(cell(m), cell((ex.by_model || {})[m] || 0), cell((dg.by_model || {})[m] || 0));
+    mrows.append(tr);
+  }
+  if (!seen.size) {
+    const tr = document.createElement('tr');
+    const td = cell('Henüz Gemini yanıtı yok.');
+    td.colSpan = 3;
+    tr.append(td);
+    mrows.append(tr);
   }
 }
 
@@ -188,20 +251,23 @@ async function removeUser(u) {
 }
 
 async function loadLogs() {
-  const only = $('failures-only').checked ? '?failures=1' : '';
-  const logs = (await api('GET', '/admin/extraction-logs' + only)).items || [];
+  const q = new URLSearchParams();
+  if ($('failures-only').checked) q.set('failures', '1');
+  if ($('log-kind').value) q.set('kind', $('log-kind').value);
+  const logs = (await api('GET', '/admin/extraction-logs?' + q)).items || [];
   const rows = $('logs');
   rows.replaceChildren();
   if (!logs.length) {
     const tr = document.createElement('tr');
     const td = cell('Kayıt yok.');
-    td.colSpan = 4;
+    td.colSpan = 5;
     tr.append(td);
     rows.append(tr);
   }
   for (const l of logs) {
     const tr = document.createElement('tr');
-    tr.append(cell(fmtDate(l.created_at)), cell(l.provider),
+    tr.append(cell(fmtDate(l.created_at)), cell(l.kind === 'diagnosis' ? 'Arıza asistanı' : 'Fiş okuma'),
+      cell(l.model ? l.provider + ' (' + l.model + ')' : l.provider),
       cell(l.success ? 'Başarılı' : 'Başarısız', l.success ? 'ok' : 'bad'), cell(l.error, 'error'));
     rows.append(tr);
   }
@@ -246,10 +312,11 @@ async function removeCategory(c) {
 // ---- wiring ----
 
 $('login-form').addEventListener('submit', login);
-$('logout').addEventListener('click', () => logout('Çıkış yapıldı.'));
+$('logout').addEventListener('click', () => logout('Çıkış yapıldı.', true));
 $('category-form').addEventListener('submit', saveCategory);
 $('user-filter').addEventListener('input', renderUsers);
 $('failures-only').addEventListener('change', () => show('logs'));
+$('log-kind').addEventListener('change', () => show('logs'));
 for (const b of document.querySelectorAll('nav button')) b.addEventListener('click', () => show(b.dataset.tab));
 
 if (token) start().catch(() => logout());
