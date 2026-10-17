@@ -61,8 +61,8 @@ Son güncelleme: 2026-10-17
 21. **Servis merkezi bulma (2026-10-17)** — Migration `0009`: `service_centers` (marka, şehir, ilçe, adres, telefon, web, isteğe bağlı koordinat; eşleşme için Türkçe karakterden bağımsız anahtarlar). `GET /products/{id}/service-centers` ürünün markasına göre şehir filtresiyle listeliyor, konum verilirse mesafeye göre sıralıyor; kayıt yoksa API anahtarı gerektirmeyen Google Haritalar araması bağlantısı veriyor. Yönetici paneline "Servis merkezleri" sekmesi (ekle, düzenle, sil) eklendi ve Chromium'da 390 px genişlikte denendi. Gerçek servis adresleri uydurulmadı: liste yönetici tarafından doldurulmalı. Mobil: ürün detayında "Yetkili Servis Bul" ekranı (şehir araması, telefonla arama, web sitesi, harita araması; yeni bağımlılık `url_launcher`). Konumdan arama için cihaz konum izni eklenmedi, şehirle aranıyor.
    CI düzeltmesi: `file_picker` 11.x, bu projedeki AGP 9 + `builtInKotlin=false` ayarıyla Android derlemesini kırdı; 10.3.3'e sabitlendi. 10.3.3 de Kotlin'i JVM 1.8, Java'yı 11 hedefiyle derlediği için `android/gradle.properties` içinde `kotlin.jvm.target.validation.mode=warning` ayarlandı.
 
-## Son durum (2026-10-17)
-Bu oturumdaki tüm commit'lerin CI koşuları yeşil (backend, PostgreSQL entegrasyonu, Docker imajı, mobil format/analiz/test, Android debug APK). Yerelde: backend 73 test fonksiyonu geçti (PostgreSQL sözleşme testleri `-tags pgx` ile ayrıca geçti), mobil 57/57.
+## Son durum (2026-10-17, kalanlar turu sonrası)
+Son commit'in CI koşusu yeşil (backend, PostgreSQL entegrasyonu, Docker imajı, mobil format/analiz/test, Android debug APK). Bu turda üç koşu kırmızı kaldı ve hemen düzeltildi: `6c0bb9b` gofmt eksikti (`1bb2d9b` ile düzeldi); `411efdc` ve `7e9763a`'da Android APK, `file_picker` sürümü yüzünden derlenmedi (`a48c74c` ile düzeldi). Yerelde: backend 95 test fonksiyonu geçti (PostgreSQL sözleşme testleri `-tags pgx` ile ayrıca geçti), mobil 69/69.
 
 ## Kalanlar / sonraki adımlar
 - [x] CI'da mobil analiz/test sonuçlarını kontrol edip olası hataları düzeltmek
