@@ -53,17 +53,24 @@ Son güncelleme: 2026-10-16
 13. **V2(d) Analitik / dashboard iyileştirmeleri** — backend: `/dashboard` yanıtına `analytics` eklendi: garanti altındaki toplam değer, garantisi süren ürün oranı, önümüzdeki 12 ayda biten garantiler, son 12 ayın alımları (tutar en çok harcanan para biriminde), en çok ürünü olan 5 marka (büyük/küçük harf duyarsız) ve servis özeti (toplam/devam eden/çözülen, ödenen ücret, ortalama çözüm süresi). Mobil: "Özet" ekranında değer kartı ve oran çubuğu, iki aylık sütun grafiği (grafik kütüphanesi eklenmedi; her sütun ekran okuyucuya "Kasım 2026: 2 garanti bitiyor" gibi okunuyor), servis özeti ve marka listesi. Eski backend'den `analytics` gelmezse bölüm gizleniyor. Mobil testler: 57/57.
 14. **V2(e) Basit admin paneli** — Karar: Flutter içinde bir admin ekranı yerine backend'e gömülü hafif bir web paneli (`/admin/`, `internal/adminui`) yapıldı; tarayıcıdan her yerden açılabiliyor, mobil uygulamayı büyütmüyor ve ek bağımlılık yok. Bölümler: özet (kullanıcı/ürün sayısı, fiş okuma başarı oranı, sağlayıcı dağılımı), kullanıcılar (arama, yönetici yapma/kaldırma, onaylı silme), fiş okuma kayıtları (hatalar filtresi) ve kategoriler (ekle/güncelle/sil). Güvenlik: yalnızca mevcut admin API'si kullanılıyor, sıkı CSP var (satır içi betik yok), veriler `textContent` ile yazılıyor (testle denetleniyor), token `sessionStorage`'da tutuluyor. Go testleri paneli, CSP'yi ve yönlendirmeyi kontrol ediyor. Chromium ile uçtan uca denendi: admin olmayan giriş reddedildi; özet, kullanıcılar, rol değiştirme, kategori ekleme ve kayıtlar sorunsuz çalıştı; HTML içeren kullanıcı adı düz metin olarak gösterildi; 375 px genişlikte yatay taşma ve konsol hatası yok.
 
+## Son durum (2026-10-17)
+Bu oturumdaki tüm commit'lerin CI koşuları yeşil (backend, PostgreSQL entegrasyonu, Docker imajı, mobil format/analiz/test, Android debug APK). Yerelde: backend 73 test fonksiyonu geçti (PostgreSQL sözleşme testleri `-tags pgx` ile ayrıca geçti), mobil 57/57.
+
 ## Kalanlar / sonraki adımlar
-- [ ] CI'da mobil analiz/test sonuçlarını kontrol edip olası hataları düzeltmek
+- [x] CI'da mobil analiz/test sonuçlarını kontrol edip olası hataları düzeltmek
 - [x] V2: barkod/QR ve seri numarası tarama
 - [x] V2: Gemini ile AI arıza asistanı (backend + mobil)
 - [x] V2: servis geçmişi iyileştirmeleri (zaman çizelgesi, ücret, özet)
 - [x] V2: analitik / dashboard iyileştirmeleri
 - [x] V2: basit admin paneli (web, `/admin/`)
-- [ ] V2: servis merkezi bulma, aile hesabı, bulut yedekleme
 - [x] Refresh token, şifre sıfırlama iskeleti
-- [ ] E-posta doğrulama ve gerçek SMTP gönderici
+- [ ] V2: servis merkezi bulma, aile hesabı, bulut yedekleme
+- [ ] E-posta doğrulama ve gerçek SMTP gönderici (şimdilik `LogSender` yalnızca maskeli log yazar)
 - [ ] S3/MinIO depolama uygulaması, FCM push
+- [ ] Servis paketi PDF'ine servis ücreti ve zaman çizelgesini eklemek
+- [ ] Admin paneline AI arıza asistanı kullanım istatistikleri; panelde refresh token ile oturum uzatma (şu an 1 saatlik access token bitince yeniden giriş istenir)
+- [ ] iOS derlemesi bu ortamda doğrulanamadı (macOS gerekir); gerçek cihazda kamera taraması elle denenmeli
+- [ ] Gemini 3.x modelleri yoğunlukta 503 verebiliyor; üretimde `GEMINI_FALLBACK_MODELS` izlenmeli
 
 ## Alınan kararlar
 - Monorepo: backend (Go), mobile (Flutter), docs.
