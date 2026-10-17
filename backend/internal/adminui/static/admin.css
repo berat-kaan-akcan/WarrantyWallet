@@ -1,0 +1,31 @@
+:root { --brand: #1b5e9e; --bg: #f6f8fb; --fg: #1d2330; --muted: #5b6475; --danger: #c62828; --ok: #2e7d32; --line: #dde3ec; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #12161d; --fg: #e8ecf3; --muted: #a3acbd; --line: #2b3240; --brand: #7fb3ea; --danger: #ef9a9a; --ok: #a5d6a7; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--fg); }
+header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+h1 { font-size: 1.2rem; margin: 0; color: var(--brand); }
+main, #login-view, #message { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
+#message:empty { display: none; }
+#message { padding: 8px 16px; }
+#message.error { color: var(--danger); }
+nav { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+button { font: inherit; padding: 8px 14px; min-height: 44px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; }
+button[aria-current="page"], button[type="submit"] { background: var(--brand); color: #fff; border-color: var(--brand); }
+@media (prefers-color-scheme: dark) { button[aria-current="page"], button[type="submit"] { color: #10151c; } }
+button.danger { color: var(--danger); border-color: var(--danger); }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+form { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin: 12px 0; }
+label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); }
+input[type="checkbox"] { width: 20px; height: 20px; }
+label:has(input[type="checkbox"]) { flex-direction: row; align-items: center; color: var(--fg); margin: 8px 0; }
+input { font: inherit; padding: 8px 10px; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--fg); }
+table { width: 100%; border-collapse: collapse; margin: 8px 0 24px; display: block; overflow-x: auto; }
+th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.error { color: var(--danger); max-width: 420px; overflow-wrap: anywhere; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.card { border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.card strong { display: block; font-size: 1.6rem; }
+.ok { color: var(--ok); }
+.bad { color: var(--danger); }

@@ -350,3 +350,6 @@ Zaman çizelgesi de silinir; kayda bağlı fotoğraflar ürünün belgeleri olar
 | DELETE | `/admin/categories/{slug}` | `204` |
 
 Admin olmayan kullanıcı `403 forbidden`, token yoksa `401` alır.
+
+### Web yönetim paneli (V2): `GET /admin/`
+Backend ikili dosyasına gömülü, bağımlılıksız HTML/JS paneli: özet, kullanıcılar (arama, rol değiştirme, silme), fiş okuma kayıtları (yalnızca hatalar filtresi) ve kategoriler (ekle/güncelle/sil). Yalnızca yukarıdaki admin API'sini kullanır; yetki kontrolü API'dedir. Giriş `/auth/login` ile yapılır, admin olmayan hesap reddedilir. Token yalnızca sekme ömrü boyunca `sessionStorage`'da tutulur. Sıkı CSP (`script-src 'self'`, satır içi betik yok, `frame-ancestors 'none'`) uygulanır ve veriler yalnızca `textContent` ile yazılır. İlk yöneticiyi atamak için `ADMIN_EMAILS` ortam değişkeni kullanılır.

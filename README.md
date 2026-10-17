@@ -36,8 +36,9 @@ garanti bitiş tarihi hesaplama, ürün listesi, ürün detay ekranı, fatura ve
 garanti bitiş bildirimleri (90/30/7 gün), servis kaydı oluşturma, "Ürünüm Arızalandı" akışı,
 servis belgeleri PDF paketi, dashboard.
 
-**V2** — QR/barkod ve seri numarası tarama, servis merkezi bulma, AI arıza asistanı, aile hesabı,
-bulut yedekleme, analitik, Admin paneli (kullanıcılar, kategoriler, markalar, OCR hataları).
+**V2** — QR/barkod ve seri numarası tarama ✅, AI arıza asistanı ✅, servis geçmişi (zaman çizelgesi,
+ücret) ✅, analitik ✅, web admin paneli (kullanıcılar, kategoriler, OCR hataları) ✅; servis merkezi bulma,
+aile hesabı, bulut yedekleme (planlandı).
 
 **V3** — Mağaza ve üretici entegrasyonları, e-postadan fatura içe aktarma, ikinci el satış,
 ürün değer tahmini, uzatılmış garanti teklifleri, Business (servis sağlayıcı) rolü.
@@ -74,8 +75,12 @@ Docker olmadan:
 cd backend
 export DATABASE_URL=postgres://warranty:warranty@localhost:5432/warranty?sslmode=disable
 export JWT_SECRET=dev-secret
-go run ./cmd/api                    # migration'lar açılışta otomatik uygulanır
+export ADMIN_EMAILS=siz@ornek.com   # bu e-postayla kayıt olan hesap yönetici olur
+go run -tags pgx ./cmd/api          # migration'lar açılışta otomatik uygulanır
 ```
+`DATABASE_URL` vermeden `go run ./cmd/api` ile hafızada çalışan (yeniden başlatınca silinen) demo modu açılır.
+
+Web yönetim paneli: <http://localhost:8080/admin/> (yalnızca `ADMIN_EMAILS` ile yönetici yapılan hesaplar girebilir).
 
 ### 3) Mobil uygulamayı çalıştırma
 ```bash
@@ -88,6 +93,9 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080
 ### 4) Testler
 ```bash
 cd backend && go vet ./... && go test ./...
+# PostgreSQL sözleşme testleri (yerel veritabanı gerekir):
+TEST_DATABASE_URL=postgres://warranty:warranty@localhost:5432/warranty_test?sslmode=disable \
+  go test -tags pgx ./internal/store/postgres/
 cd mobile && flutter analyze && flutter test
 ```
 Testler gerçek Gemini API'sini çağırmaz (mock kullanılır); CI'da anahtar gerekmez.

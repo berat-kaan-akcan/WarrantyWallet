@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Warranty Wallet Yönetim</title>
+  <link rel="stylesheet" href="admin.css">
+  <script src="admin.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>Warranty Wallet · Yönetim</h1>
+    <div id="who" hidden><span id="who-email"></span> <button id="logout" type="button">Çıkış</button></div>
+  </header>
+  <p id="message" role="status" aria-live="polite"></p>
+
+  <section id="login-view" aria-labelledby="login-title">
+    <h2 id="login-title">Yönetici girişi</h2>
+    <form id="login-form">
+      <label>E-posta <input id="email" type="email" autocomplete="username" required></label>
+      <label>Şifre <input id="password" type="password" autocomplete="current-password" required></label>
+      <button type="submit">Giriş yap</button>
+    </form>
+  </section>
+
+  <main id="app" hidden>
+    <nav aria-label="Bölümler">
+      <button type="button" data-tab="stats" aria-current="page">Özet</button>
+      <button type="button" data-tab="users">Kullanıcılar</button>
+      <button type="button" data-tab="logs">Fiş okuma kayıtları</button>
+      <button type="button" data-tab="categories">Kategoriler</button>
+    </nav>
+
+    <section id="tab-stats" aria-labelledby="stats-title">
+      <h2 id="stats-title">Özet</h2>
+      <div class="cards" id="stats-cards"></div>
+      <h3>Sağlayıcıya göre fiş okuma</h3>
+      <table><thead><tr><th scope="col">Sağlayıcı</th><th scope="col">Adet</th></tr></thead><tbody id="providers"></tbody></table>
+    </section>
+
+    <section id="tab-users" aria-labelledby="users-title" hidden>
+      <h2 id="users-title">Kullanıcılar</h2>
+      <label>Ara <input id="user-filter" type="search" placeholder="e-posta veya ad"></label>
+      <table>
+        <thead><tr><th scope="col">E-posta</th><th scope="col">Ad</th><th scope="col">Rol</th><th scope="col">Kayıt</th><th scope="col">İşlem</th></tr></thead>
+        <tbody id="users"></tbody>
+      </table>
+    </section>
+
+    <section id="tab-logs" aria-labelledby="logs-title" hidden>
+      <h2 id="logs-title">Fiş okuma kayıtları</h2>
+      <label><input id="failures-only" type="checkbox"> Yalnızca hatalar</label>
+      <table>
+        <thead><tr><th scope="col">Zaman</th><th scope="col">Sağlayıcı</th><th scope="col">Sonuç</th><th scope="col">Hata</th></tr></thead>
+        <tbody id="logs"></tbody>
+      </table>
+    </section>
+
+    <section id="tab-categories" aria-labelledby="cat-title" hidden>
+      <h2 id="cat-title">Kategoriler</h2>
+      <form id="category-form">
+        <label>Kısa ad (slug) <input id="cat-slug" pattern="[a-z][a-z0-9_]{1,39}" required placeholder="drone"></label>
+        <label>Türkçe ad <input id="cat-name" maxlength="60" required placeholder="Drone"></label>
+        <button type="submit">Ekle / güncelle</button>
+      </form>
+      <table>
+        <thead><tr><th scope="col">Slug</th><th scope="col">Ad</th><th scope="col">İşlem</th></tr></thead>
+        <tbody id="categories"></tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

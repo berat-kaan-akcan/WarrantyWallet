@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/adminui"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/assist"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/auth"
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/domain"
@@ -122,6 +123,10 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/v1/admin/extraction-logs", admin(s.handleAdminExtractionLogs))
 	mux.Handle("POST /api/v1/admin/categories", admin(s.handleAdminUpsertCategory))
 	mux.Handle("DELETE /api/v1/admin/categories/{slug}", admin(s.handleAdminDeleteCategory))
+
+	// Web admin panel (static; every action goes through the admin API above).
+	mux.Handle("GET /admin/", adminui.Handler())
+	mux.Handle("GET /admin", http.RedirectHandler("/admin/", http.StatusMovedPermanently))
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "route not found", nil)
