@@ -32,6 +32,12 @@ abstract class WarrantyRepository {
   Future<void> logout(String? refreshToken);
   Future<void> registerDevice(String token, String platform);
   Future<Uint8List> exportBackup();
+  Future<FamilyInfo> family();
+  Future<FamilyInfo> createFamily(String name);
+  Future<String> createFamilyInvite();
+  Future<FamilyInfo> joinFamily(String code);
+  Future<void> removeFamilyMember(String userId);
+  Future<List<FamilyProduct>> familyProducts();
   Future<ImportSummary> importBackup(Uint8List zip);
   Future<void> unregisterDevice(String token);
   Future<void> forgotPassword(String email);
@@ -129,6 +135,34 @@ class ApiWarrantyRepository implements WarrantyRepository {
   Future<void> logout(String? refreshToken) async {
     await api.post('/auth/logout', {'refresh_token': refreshToken ?? ''});
   }
+
+  @override
+  Future<FamilyInfo> family() async =>
+      FamilyInfo.fromJson(await api.get('/family'));
+
+  @override
+  Future<FamilyInfo> createFamily(String name) async =>
+      FamilyInfo.fromJson(await api.post('/family', {'name': name.trim()}));
+
+  @override
+  Future<String> createFamilyInvite() async =>
+      '${(await api.post('/family/invites', null))['code']}';
+
+  @override
+  Future<FamilyInfo> joinFamily(String code) async => FamilyInfo.fromJson(
+      await api.post('/family/join', {'code': code.trim()}));
+
+  @override
+  Future<void> removeFamilyMember(String userId) =>
+      api.delete('/family/members/${Uri.encodeComponent(userId)}');
+
+  @override
+  Future<List<FamilyProduct>> familyProducts() async => [
+        for (final j
+            in ((await api.get('/family/products'))['items'] as List?) ??
+                const [])
+          FamilyProduct.fromJson(j as Map<String, dynamic>)
+      ];
 
   @override
   Future<Uint8List> exportBackup() => api.download('/me/export');

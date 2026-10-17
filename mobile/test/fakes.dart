@@ -111,6 +111,66 @@ class FakeRepository implements WarrantyRepository {
       errors: ['"Kettle" belgesi atlandı: dosya türü desteklenmiyor']);
   final imported = <Uint8List>[];
 
+  FamilyInfo familyInfo = const FamilyInfo();
+  String inviteCode = 'K7QM-2XRP';
+  List<FamilyProduct> familyItems = [];
+
+  @override
+  Future<FamilyInfo> family() async => familyInfo;
+
+  @override
+  Future<FamilyInfo> createFamily(String name) async {
+    calls.add('family+:$name');
+    return familyInfo =
+        FamilyInfo(id: 'f1', name: name, isOwner: true, members: [
+      FamilyMember(
+          id: testUser.id,
+          name: testUser.name,
+          email: testUser.email,
+          isOwner: true)
+    ]);
+  }
+
+  @override
+  Future<String> createFamilyInvite() async => inviteCode;
+
+  @override
+  Future<FamilyInfo> joinFamily(String code) async {
+    calls.add('join:$code');
+    if (code.trim().toUpperCase() != inviteCode) {
+      throw ApiException(400, 'invalid_invite_code', 'bad');
+    }
+    return familyInfo = FamilyInfo(id: 'f1', name: 'Akcan ailesi', members: [
+      const FamilyMember(
+          id: 'u0', name: 'Ayşe', email: 'ayse@test.io', isOwner: true),
+      FamilyMember(
+          id: testUser.id,
+          name: testUser.name,
+          email: testUser.email,
+          isOwner: false),
+    ]);
+  }
+
+  @override
+  Future<void> removeFamilyMember(String userId) async {
+    calls.add('family-:$userId');
+    if (userId == testUser.id) {
+      familyInfo = const FamilyInfo();
+    } else {
+      familyInfo = FamilyInfo(
+          id: familyInfo.id,
+          name: familyInfo.name,
+          isOwner: familyInfo.isOwner,
+          members: [
+            for (final m in familyInfo.members)
+              if (m.id != userId) m
+          ]);
+    }
+  }
+
+  @override
+  Future<List<FamilyProduct>> familyProducts() async => familyItems;
+
   @override
   Future<Uint8List> exportBackup() async => backup;
 

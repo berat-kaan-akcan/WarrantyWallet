@@ -47,6 +47,72 @@ func Run(t *testing.T, newStore func(t *testing.T) store.Store) {
 		}
 	})
 
+	t.Run("families", func(t *testing.T) {
+		s := newStore(t)
+		a, b, c := mkUser(t, s, "fam-a@x.io"), mkUser(t, s, "fam-b@x.io"), mkUser(t, s, "fam-c@x.io")
+		if _, err := s.GetFamilyForUser(ctx, a); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatalf("no family yet %v", err)
+		}
+		f := &domain.Family{Name: "Akcan ailesi", OwnerID: a}
+		if err := s.CreateFamily(ctx, f); err != nil || f.ID == "" || f.CreatedAt.IsZero() {
+			t.Fatalf("create %v %+v", err, f)
+		}
+		if err := s.CreateFamily(ctx, &domain.Family{Name: "İkinci", OwnerID: a}); !errors.Is(err, domain.ErrConflict) {
+			t.Fatalf("second family %v", err)
+		}
+		if err := s.AddFamilyMember(ctx, f.ID, b); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.AddFamilyMember(ctx, f.ID, b); !errors.Is(err, domain.ErrConflict) {
+			t.Fatalf("double join %v", err)
+		}
+		if err := s.AddFamilyMember(ctx, domain.NewID(), c); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatalf("unknown family %v", err)
+		}
+		if err := s.CreateFamily(ctx, &domain.Family{Name: "B", OwnerID: b}); !errors.Is(err, domain.ErrConflict) {
+			t.Fatalf("member creating a family %v", err)
+		}
+		got, err := s.GetFamilyForUser(ctx, b)
+		if err != nil || got.ID != f.ID || got.OwnerID != a || got.Name != "Akcan ailesi" {
+			t.Fatalf("family of b %+v %v", got, err)
+		}
+		_ = s.RenameFamily(ctx, f.ID, "Ev")
+		ms, _ := s.ListFamilyMembers(ctx, f.ID)
+		if len(ms) != 2 || ms[0].UserID != a || ms[0].Role != domain.FamilyOwner || ms[1].Email != "fam-b@x.io" || ms[1].Role != domain.FamilyMember {
+			t.Fatalf("members %+v", ms)
+		}
+		if g, _ := s.GetFamilyForUser(ctx, a); g.Name != "Ev" {
+			t.Fatalf("rename %+v", g)
+		}
+		if err := s.RemoveFamilyMember(ctx, f.ID, c); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatalf("remove non-member %v", err)
+		}
+		if err := s.RemoveFamilyMember(ctx, f.ID, b); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := s.GetFamilyForUser(ctx, b); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatal("b still in family")
+		}
+		_ = s.AddFamilyMember(ctx, f.ID, c)
+		if err := s.DeleteUser(ctx, a); err != nil { // owner deleted → family gone
+			t.Fatal(err)
+		}
+		if _, err := s.GetFamilyForUser(ctx, c); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatal("family survived its owner")
+		}
+		f2 := &domain.Family{Name: "C", OwnerID: c}
+		if err := s.CreateFamily(ctx, f2); err != nil {
+			t.Fatal(err)
+		}
+		_ = s.AddFamilyMember(ctx, f2.ID, b)
+		if err := s.DeleteFamily(ctx, f2.ID); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := s.GetFamilyForUser(ctx, b); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatal("membership survived family deletion")
+		}
+	})
+
 	t.Run("device_tokens", func(t *testing.T) {
 		s := newStore(t)
 		a, b := mkUser(t, s, "dev-a@x.io"), mkUser(t, s, "dev-b@x.io")

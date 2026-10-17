@@ -6,6 +6,7 @@ import '../../state/providers.dart';
 import '../../widgets/common.dart';
 import 'backup_screen.dart';
 import 'change_password_screen.dart';
+import 'family_screen.dart';
 
 /// Hesap ve uygulama ayarları.
 class SettingsScreen extends ConsumerWidget {
@@ -96,6 +97,14 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Şifreyi değiştir'),
             onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
                 builder: (_) => const ChangePasswordScreen())),
+          ),
+          ListTile(
+            key: const Key('family'),
+            leading: const Icon(Icons.family_restroom),
+            title: const Text('Aile hesabı'),
+            subtitle: const Text('Ailenizin garantilerini birlikte takip edin'),
+            onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const FamilyScreen())),
           ),
           ListTile(
             key: const Key('backup'),

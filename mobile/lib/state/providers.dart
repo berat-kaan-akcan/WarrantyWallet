@@ -261,3 +261,9 @@ void refreshProducts(WidgetRef ref, [String? productId]) {
     ref.invalidate(productServiceRecordsProvider(productId));
   }
 }
+
+final familyProvider =
+    FutureProvider<FamilyInfo>((ref) => ref.watch(repositoryProvider).family());
+
+final familyProductsProvider = FutureProvider<List<FamilyProduct>>(
+    (ref) => ref.watch(repositoryProvider).familyProducts());

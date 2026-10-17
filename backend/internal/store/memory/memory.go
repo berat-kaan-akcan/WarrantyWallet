@@ -26,6 +26,8 @@ type Store struct {
 	categories map[string]domain.Category
 	tokens     map[string]domain.AuthToken // by hash
 	devices    map[string]domain.DeviceToken
+	families   map[string]domain.Family
+	members    map[string]familyMember // by user id
 	now        func() time.Time
 }
 
@@ -38,6 +40,7 @@ func New() *Store {
 		documents: map[string]domain.Document{}, services: map[string]domain.ServiceRecord{}, events: map[string][]domain.ServiceEvent{},
 		notifs: map[string]domain.Notification{}, categories: map[string]domain.Category{},
 		tokens: map[string]domain.AuthToken{}, devices: map[string]domain.DeviceToken{},
+		families: map[string]domain.Family{}, members: map[string]familyMember{},
 		now: time.Now,
 	}
 	for _, c := range domain.DefaultCategories {
@@ -153,6 +156,12 @@ func (s *Store) DeleteUser(_ context.Context, id string) error {
 			delete(s.devices, k)
 		}
 	}
+	for fid, f := range s.families { // like ON DELETE CASCADE on families.owner_id
+		if f.OwnerID == id {
+			s.deleteFamilyLocked(fid)
+		}
+	}
+	delete(s.members, id)
 	for k, p := range s.products {
 		if p.UserID == id {
 			s.deleteProductLocked(k)
@@ -679,4 +688,127 @@ func (s *Store) ListDeviceTokens(_ context.Context, userID string) ([]domain.Dev
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].LastSeenAt.After(out[j].LastSeenAt) })
 	return out, nil
+}
+
+// ---- families ----
+
+type familyMember struct {
+	familyID string
+	role     domain.FamilyRole
+	joinedAt time.Time
+}
+
+// CreateFamily creates a family owned by f.OwnerID.
+func (s *Store) CreateFamily(_ context.Context, f *domain.Family) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.users[f.OwnerID]; !ok {
+		return domain.ErrNotFound
+	}
+	if _, in := s.members[f.OwnerID]; in {
+		return domain.ErrConflict
+	}
+	if f.ID == "" {
+		f.ID = domain.NewID()
+	}
+	f.CreatedAt = s.now().UTC()
+	s.families[f.ID] = *f
+	s.members[f.OwnerID] = familyMember{familyID: f.ID, role: domain.FamilyOwner, joinedAt: f.CreatedAt}
+	return nil
+}
+
+// GetFamilyForUser returns the user's family.
+func (s *Store) GetFamilyForUser(_ context.Context, userID string) (domain.Family, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	m, ok := s.members[userID]
+	if !ok {
+		return domain.Family{}, domain.ErrNotFound
+	}
+	return s.families[m.familyID], nil
+}
+
+// ListFamilyMembers lists members, owner first.
+func (s *Store) ListFamilyMembers(_ context.Context, familyID string) ([]domain.FamilyMemberInfo, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := []domain.FamilyMemberInfo{}
+	for uid, m := range s.members {
+		if m.familyID != familyID {
+			continue
+		}
+		u := s.users[uid]
+		out = append(out, domain.FamilyMemberInfo{UserID: uid, Name: u.Name, Email: u.Email, Role: m.role, JoinedAt: m.joinedAt})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if (out[i].Role == domain.FamilyOwner) != (out[j].Role == domain.FamilyOwner) {
+			return out[i].Role == domain.FamilyOwner
+		}
+		if !out[i].JoinedAt.Equal(out[j].JoinedAt) {
+			return out[i].JoinedAt.Before(out[j].JoinedAt)
+		}
+		return out[i].UserID < out[j].UserID
+	})
+	return out, nil
+}
+
+// RenameFamily changes the family name.
+func (s *Store) RenameFamily(_ context.Context, familyID, name string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	f, ok := s.families[familyID]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	f.Name = name
+	s.families[familyID] = f
+	return nil
+}
+
+// AddFamilyMember adds userID as a member.
+func (s *Store) AddFamilyMember(_ context.Context, familyID, userID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.families[familyID]; !ok {
+		return domain.ErrNotFound
+	}
+	if _, ok := s.users[userID]; !ok {
+		return domain.ErrNotFound
+	}
+	if _, in := s.members[userID]; in {
+		return domain.ErrConflict
+	}
+	s.members[userID] = familyMember{familyID: familyID, role: domain.FamilyMember, joinedAt: s.now().UTC()}
+	return nil
+}
+
+// RemoveFamilyMember removes a member.
+func (s *Store) RemoveFamilyMember(_ context.Context, familyID, userID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if m, ok := s.members[userID]; !ok || m.familyID != familyID {
+		return domain.ErrNotFound
+	}
+	delete(s.members, userID)
+	return nil
+}
+
+// DeleteFamily removes the family and all memberships.
+func (s *Store) DeleteFamily(_ context.Context, familyID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.families[familyID]; !ok {
+		return domain.ErrNotFound
+	}
+	s.deleteFamilyLocked(familyID)
+	return nil
+}
+
+func (s *Store) deleteFamilyLocked(familyID string) {
+	delete(s.families, familyID)
+	for uid, m := range s.members {
+		if m.familyID == familyID {
+			delete(s.members, uid)
+		}
+	}
 }

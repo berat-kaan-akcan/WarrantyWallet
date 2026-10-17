@@ -51,6 +51,14 @@ class ApiException implements Exception {
         return 'Fiş okunamadı. Bilgileri elle girebilirsiniz.';
       case 'timeout':
         return 'İstek zaman aşımına uğradı. Lütfen tekrar deneyin.';
+      case 'invalid_invite_code':
+        return 'Davet kodu hatalı, süresi dolmuş veya kullanılmış.';
+      case 'already_in_family':
+        return 'Zaten bir ailedesiniz. Önce mevcut aileden ayrılın.';
+      case 'family_full':
+        return 'Bir ailede en fazla 8 kişi olabilir.';
+      case 'invalid_backup':
+        return 'Bu dosya bir Warranty Wallet yedeği değil.';
     }
     return status >= 500
         ? 'Sunucu hatası. Lütfen daha sonra tekrar deneyin.'

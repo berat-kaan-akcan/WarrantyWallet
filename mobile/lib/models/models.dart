@@ -697,3 +697,67 @@ class ImportSummary {
   final int failed;
   final List<String> errors;
 }
+
+/// A family member (public account info).
+class FamilyMember {
+  const FamilyMember(
+      {required this.id,
+      required this.name,
+      required this.email,
+      required this.isOwner});
+
+  factory FamilyMember.fromJson(Map<String, dynamic> j) => FamilyMember(
+        id: '${j['id'] ?? ''}',
+        name: '${j['name'] ?? ''}',
+        email: '${j['email'] ?? ''}',
+        isOwner: j['role'] == 'owner',
+      );
+
+  final String id;
+  final String name;
+  final String email;
+  final bool isOwner;
+
+  String get displayName => name.isNotEmpty ? name : email.split('@').first;
+}
+
+/// The caller's family; [name] is null when the user is not in one.
+class FamilyInfo {
+  const FamilyInfo(
+      {this.id, this.name, this.isOwner = false, this.members = const []});
+
+  factory FamilyInfo.fromJson(Map<String, dynamic> j) {
+    final f = j['family'] as Map<String, dynamic>?;
+    return FamilyInfo(
+      id: f?['id'] as String?,
+      name: f?['name'] as String?,
+      isOwner: j['role'] == 'owner',
+      members: [
+        for (final m in (j['members'] as List?) ?? const [])
+          FamilyMember.fromJson(m as Map<String, dynamic>)
+      ],
+    );
+  }
+
+  final String? id;
+  final String? name;
+  final bool isOwner;
+  final List<FamilyMember> members;
+
+  bool get inFamily => id != null;
+}
+
+/// A product of any family member (read-only).
+class FamilyProduct {
+  const FamilyProduct(this.product, this.ownerId, this.ownerName);
+
+  factory FamilyProduct.fromJson(Map<String, dynamic> j) {
+    final o = (j['owner'] as Map<String, dynamic>?) ?? const {};
+    return FamilyProduct(
+        Product.fromJson(j), '${o['id'] ?? ''}', '${o['name'] ?? ''}');
+  }
+
+  final Product product;
+  final String ownerId;
+  final String ownerName;
+}

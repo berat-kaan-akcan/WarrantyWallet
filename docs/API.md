@@ -241,6 +241,39 @@ Yalnızca kendi cihazınızı siler (çıkışta çağrılır). Başka kullanıc
 
 ---
 
+## Aile hesabı
+
+Bir kullanıcı en fazla bir ailede olur (en fazla 8 üye). Üyeler birbirinin ürünlerini ve garanti durumunu **salt okunur**
+görür; ürün düzenleme, belgeler ve servis kayıtları sahibine özel kalır (`/products/{id}` başka üyeye `404` döner).
+
+### `GET /family` (auth)
+```json
+{"family":{"id":"...","name":"Akcan ailesi","owner_id":"...","created_at":"..."},"role":"owner",
+ "members":[{"id":"...","name":"Ayşe","email":"ayse@example.com","role":"owner","joined_at":"..."}]}
+```
+Ailede değilse `{"family":null,"members":[]}`.
+
+### `POST /family` (auth) `{"name":"Akcan ailesi"}` → `201` (aynı gövde)
+`409 already_in_family`, `422` (`fields.name`, 1–60 karakter).
+
+### `PATCH /family` (auth, yalnızca yönetici) `{"name":"Ev"}` → `200`
+
+### `POST /family/invites` (auth, yalnızca yönetici) → `201 {"code":"K7QM-2XRP","expires_at":"..."}`
+Kod 7 gün geçerli ve tek kullanımlıktır; sunucuda yalnızca özeti saklanır. Aile doluysa `409 family_full`.
+
+### `POST /family/join` (auth, 10 istek/dk) `{"code":"k7qm 2xrp"}` → `200` (aile görünümü)
+Büyük/küçük harf, boşluk ve tire önemsizdir. `400 invalid_invite_code`, `409 already_in_family`, `409 family_full`.
+
+### `DELETE /family/members/{userId}` (auth) → `204`
+Kendi id'nizle aileden ayrılırsınız; yönetici ayrılırsa aile dağılır (bekleyen davetler de geçersiz olur).
+Başkasını yalnızca yönetici çıkarabilir (`403`). Ailede değilseniz `404 not_in_family`.
+
+### `GET /family/products?status=` (auth)
+Tüm üyelerin ürünleri, garanti bitişi en yakın olan önce: `{"items":[{...ürün..., "status":"expiring_soon","days_left":16,
+"owner":{"id":"...","name":"Kaan"}}]}`. Ailede değilseniz `404 not_in_family`.
+
+---
+
 ## Belgeler
 
 ### `POST /products/{id}/documents` (auth, multipart)

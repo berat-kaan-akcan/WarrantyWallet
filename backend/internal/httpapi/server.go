@@ -123,6 +123,13 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/v1/extract", a(s.extractLimiter.wrap(http.HandlerFunc(s.handleExtract))))
 	mux.Handle("GET /api/v1/dashboard", a(http.HandlerFunc(s.handleDashboard)))
 	mux.Handle("GET /api/v1/notifications", a(http.HandlerFunc(s.handleNotifications)))
+	mux.Handle("GET /api/v1/family", a(http.HandlerFunc(s.handleGetFamily)))
+	mux.Handle("POST /api/v1/family", a(http.HandlerFunc(s.handleCreateFamily)))
+	mux.Handle("PATCH /api/v1/family", a(http.HandlerFunc(s.handleRenameFamily)))
+	mux.Handle("POST /api/v1/family/invites", a(http.HandlerFunc(s.handleCreateInvite)))
+	mux.Handle("POST /api/v1/family/join", a(s.authLimiter.wrap(http.HandlerFunc(s.handleJoinFamily))))
+	mux.Handle("DELETE /api/v1/family/members/{id}", a(http.HandlerFunc(s.handleRemoveFamilyMember)))
+	mux.Handle("GET /api/v1/family/products", a(http.HandlerFunc(s.handleFamilyProducts)))
 	mux.Handle("POST /api/v1/devices", a(http.HandlerFunc(s.handleRegisterDevice)))
 	mux.Handle("DELETE /api/v1/devices/{token}", a(http.HandlerFunc(s.handleUnregisterDevice)))
 

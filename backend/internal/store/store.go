@@ -69,6 +69,16 @@ type Store interface {
 	DeleteDeviceToken(ctx context.Context, userID, token string) error
 	ListDeviceTokens(ctx context.Context, userID string) ([]domain.DeviceToken, error) // newest first
 
+	// CreateFamily creates f with f.OwnerID as owner; ErrConflict when the owner is already in a family.
+	CreateFamily(ctx context.Context, f *domain.Family) error
+	GetFamilyForUser(ctx context.Context, userID string) (domain.Family, error)                // ErrNotFound when in none
+	ListFamilyMembers(ctx context.Context, familyID string) ([]domain.FamilyMemberInfo, error) // owner first, then by join time
+	RenameFamily(ctx context.Context, familyID, name string) error
+	// AddFamilyMember: ErrConflict when the user is already in a family, ErrNotFound when the family is gone.
+	AddFamilyMember(ctx context.Context, familyID, userID string) error
+	RemoveFamilyMember(ctx context.Context, familyID, userID string) error // ErrNotFound when not a member
+	DeleteFamily(ctx context.Context, familyID string) error
+
 	CreateExtractionLog(ctx context.Context, l *domain.ExtractionLog) error
 	ListExtractionLogs(ctx context.Context, onlyFailures bool, limit int) ([]domain.ExtractionLog, error)
 

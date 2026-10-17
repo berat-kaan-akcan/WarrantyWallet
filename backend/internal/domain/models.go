@@ -313,6 +313,7 @@ const (
 	TokenRefresh       AuthTokenKind = "refresh"
 	TokenPasswordReset AuthTokenKind = "password_reset"
 	TokenEmailVerify   AuthTokenKind = "email_verify"
+	TokenFamilyInvite  AuthTokenKind = "family_invite" // UserID = the inviting member
 )
 
 // AuthToken is an opaque token (refresh or password reset). Only its SHA-256 hash is stored;
@@ -335,4 +336,33 @@ type DeviceToken struct {
 	Platform   string    `json:"platform"` // android | ios
 	CreatedAt  time.Time `json:"created_at"`
 	LastSeenAt time.Time `json:"last_seen_at"`
+}
+
+// FamilyRole is a member's role in a family.
+type FamilyRole string
+
+// Family roles. The owner names the family, invites and removes members.
+const (
+	FamilyOwner  FamilyRole = "owner"
+	FamilyMember FamilyRole = "member"
+)
+
+// MaxFamilyMembers caps a family's size.
+const MaxFamilyMembers = 8
+
+// Family groups users who can see each other's products (read-only). A user is in at most one family.
+type Family struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	OwnerID   string    `json:"owner_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// FamilyMemberInfo is a member with the public parts of their account.
+type FamilyMemberInfo struct {
+	UserID   string     `json:"id"`
+	Name     string     `json:"name"`
+	Email    string     `json:"email"`
+	Role     FamilyRole `json:"role"`
+	JoinedAt time.Time  `json:"joined_at"`
 }

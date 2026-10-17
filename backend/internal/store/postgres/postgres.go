@@ -823,3 +823,112 @@ func (s *Store) ListDeviceTokens(ctx context.Context, userID string) ([]domain.D
 	}
 	return out, rows.Err()
 }
+
+// ---- families ----
+
+// CreateFamily creates a family and its owner membership in one transaction.
+func (s *Store) CreateFamily(ctx context.Context, f *domain.Family) error {
+	if !validUUID(f.OwnerID) {
+		return domain.ErrNotFound
+	}
+	if f.ID == "" {
+		f.ID = domain.NewID()
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	err = tx.QueryRowContext(ctx, `INSERT INTO families (id, name, owner_id) VALUES ($1,$2,$3) RETURNING created_at`,
+		f.ID, f.Name, f.OwnerID).Scan(&f.CreatedAt)
+	if isFKViolation(err) {
+		return domain.ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO family_members (user_id, family_id, role, joined_at) VALUES ($1,$2,'owner',$3)`,
+		f.OwnerID, f.ID, f.CreatedAt)
+	if isUniqueViolation(err) {
+		return domain.ErrConflict
+	}
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// GetFamilyForUser returns the family the user belongs to.
+func (s *Store) GetFamilyForUser(ctx context.Context, userID string) (domain.Family, error) {
+	var f domain.Family
+	if !validUUID(userID) {
+		return f, domain.ErrNotFound
+	}
+	err := s.db.QueryRowContext(ctx, `SELECT f.id, f.name, f.owner_id, f.created_at FROM families f
+		JOIN family_members m ON m.family_id=f.id WHERE m.user_id=$1`, userID).Scan(&f.ID, &f.Name, &f.OwnerID, &f.CreatedAt)
+	return f, notFound(err)
+}
+
+// ListFamilyMembers lists members with name and e-mail, owner first.
+func (s *Store) ListFamilyMembers(ctx context.Context, familyID string) ([]domain.FamilyMemberInfo, error) {
+	out := []domain.FamilyMemberInfo{}
+	if !validUUID(familyID) {
+		return out, nil
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT u.id, u.name, u.email, m.role, m.joined_at FROM family_members m
+		JOIN users u ON u.id=m.user_id WHERE m.family_id=$1
+		ORDER BY (m.role='owner') DESC, m.joined_at, u.id`, familyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var m domain.FamilyMemberInfo
+		var role string
+		if err := rows.Scan(&m.UserID, &m.Name, &m.Email, &role, &m.JoinedAt); err != nil {
+			return nil, err
+		}
+		m.Role = domain.FamilyRole(role)
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
+// RenameFamily changes the family name.
+func (s *Store) RenameFamily(ctx context.Context, familyID, name string) error {
+	if !validUUID(familyID) {
+		return domain.ErrNotFound
+	}
+	return affected(s.db.ExecContext(ctx, `UPDATE families SET name=$2 WHERE id=$1`, familyID, name))
+}
+
+// AddFamilyMember adds a member; the primary key on user_id enforces one family per user.
+func (s *Store) AddFamilyMember(ctx context.Context, familyID, userID string) error {
+	if !validUUID(familyID) || !validUUID(userID) {
+		return domain.ErrNotFound
+	}
+	_, err := s.db.ExecContext(ctx, `INSERT INTO family_members (user_id, family_id, role) VALUES ($1,$2,'member')`, userID, familyID)
+	switch {
+	case isUniqueViolation(err):
+		return domain.ErrConflict
+	case isFKViolation(err):
+		return domain.ErrNotFound
+	}
+	return err
+}
+
+// RemoveFamilyMember removes a member.
+func (s *Store) RemoveFamilyMember(ctx context.Context, familyID, userID string) error {
+	if !validUUID(familyID) || !validUUID(userID) {
+		return domain.ErrNotFound
+	}
+	return affected(s.db.ExecContext(ctx, `DELETE FROM family_members WHERE family_id=$1 AND user_id=$2`, familyID, userID))
+}
+
+// DeleteFamily removes the family (memberships cascade).
+func (s *Store) DeleteFamily(ctx context.Context, familyID string) error {
+	if !validUUID(familyID) {
+		return domain.ErrNotFound
+	}
+	return affected(s.db.ExecContext(ctx, `DELETE FROM families WHERE id=$1`, familyID))
+}
