@@ -538,6 +538,7 @@ class Dashboard {
     this.byCategory = const [],
     this.upcoming = const [],
     this.openServiceRecords = 0,
+    this.analytics,
   });
 
   factory Dashboard.fromJson(Map<String, dynamic> j) {
@@ -556,6 +557,9 @@ class Dashboard {
       byCategory: _list(j['by_category']).map(CategoryStat.fromJson).toList(),
       upcoming: _list(j['upcoming']).map(Product.fromJson).toList(),
       openServiceRecords: _i(j['open_service_records']),
+      analytics: j['analytics'] is Map<String, dynamic>
+          ? DashboardAnalytics.fromJson(j['analytics'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -568,4 +572,95 @@ class Dashboard {
   final List<CategoryStat> byCategory;
   final List<Product> upcoming;
   final int openServiceRecords;
+  final DashboardAnalytics? analytics; // null on older backends
+}
+
+/// One month bucket (yyyy-MM).
+class MonthStat {
+  const MonthStat(this.month, this.count, [this.total = 0]);
+
+  factory MonthStat.fromJson(Map<String, dynamic> j) =>
+      MonthStat(_s(j['month']), _i(j['count']), _d(j['total']));
+
+  final String month;
+  final int count;
+  final double total;
+
+  static const _names = [
+    'Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', //
+    'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara',
+  ];
+
+  /// Short Turkish month name ("Eki").
+  String get shortLabel {
+    final m = int.tryParse(month.length >= 7 ? month.substring(5, 7) : '');
+    return m == null || m < 1 || m > 12 ? month : _names[m - 1];
+  }
+
+  /// "Ekim 2026"-style label for screen readers.
+  String get longLabel {
+    const long = [
+      'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', //
+      'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık',
+    ];
+    final m = int.tryParse(month.length >= 7 ? month.substring(5, 7) : '');
+    if (m == null || m < 1 || m > 12) return month;
+    return '${long[m - 1]} ${month.substring(0, 4)}';
+  }
+}
+
+/// V2 dashboard analytics.
+class DashboardAnalytics {
+  const DashboardAnalytics({
+    this.primaryCurrency = 'TRY',
+    this.protectedValue = const {},
+    this.coverageRate = 0,
+    this.expiryTimeline = const [],
+    this.monthlyPurchases = const [],
+    this.topBrands = const [],
+    this.serviceTotal = 0,
+    this.serviceActive = 0,
+    this.serviceResolved = 0,
+    this.serviceCost = 0,
+    this.avgResolutionDays,
+  });
+
+  factory DashboardAnalytics.fromJson(Map<String, dynamic> j) {
+    final service = (j['service'] as Map<String, dynamic>?) ?? const {};
+    final value = <String, double>{};
+    final raw = j['protected_value'];
+    if (raw is Map) raw.forEach((k, v) => value[k.toString()] = _d(v));
+    return DashboardAnalytics(
+      primaryCurrency:
+          _s(j['primary_currency']).isEmpty ? 'TRY' : _s(j['primary_currency']),
+      protectedValue: value,
+      coverageRate: _d(j['coverage_rate']),
+      expiryTimeline:
+          _list(j['expiry_timeline']).map(MonthStat.fromJson).toList(),
+      monthlyPurchases:
+          _list(j['monthly_purchases']).map(MonthStat.fromJson).toList(),
+      topBrands: [
+        for (final b in _list(j['top_brands'])) (_s(b['brand']), _i(b['count']))
+      ],
+      serviceTotal: _i(service['total']),
+      serviceActive: _i(service['active']),
+      serviceResolved: _i(service['resolved']),
+      serviceCost: _d(service['total_cost']),
+      avgResolutionDays: service['avg_resolution_days'] is num
+          ? (service['avg_resolution_days'] as num).toDouble()
+          : null,
+    );
+  }
+
+  final String primaryCurrency;
+  final Map<String, double> protectedValue;
+  final double coverageRate;
+  final List<MonthStat> expiryTimeline;
+  final List<MonthStat> monthlyPurchases;
+  final List<(String, int)> topBrands;
+  final int serviceTotal;
+  final int serviceActive;
+  final int serviceResolved;
+  final double serviceCost;
+  final double? avgResolutionDays;
 }

@@ -50,12 +50,14 @@ Son güncelleme: 2026-10-16
 11. **V2(b) AI arıza asistanı — mobil** — "Ürünüm Arızalandı" ekranına "Olası nedenleri ve çözümleri gör (AI)" düğmesi eklendi. Yeni "Arıza asistanı" ekranı güvenlik uyarısını (öne çıkarılmış, ekran okuyucu duyurur), özeti, olasılık etiketli nedenleri, numaralı adımları ve garanti tavsiyesini gösteriyor; kaynağı (Gemini modeli veya yerleşik öneriler) ve uyarı metnini belirtiyor. "Servis kaydı oluştur" mevcut kayıt akışına devam ediyor, "Sorun çözüldü" kayıt açmadan geri dönüyor. Yapay zekâ çağrısı için istemci zaman aşımı 60 sn (diğer istekler 30 sn). Ek düzeltme: art arda gösterilen uyarı mesajları artık kuyruğa girmiyor, yenisi eskisinin yerine geçiyor. Mobil testler: 48/48.
 12. **V2(c) Servis geçmişi iyileştirmeleri** — backend: migration `0004` ile servis kaydına `cost` (ödenen onarım ücreti) ve `resolved_at` (çözüldü/iptal olunca sunucu doldurur, yeniden açılınca silinir) eklendi; yeni `service_events` tablosu durum değişikliklerini isteğe bağlı notla zaman çizelgesi olarak tutuyor. `GET /service-records/{id}` zaman çizelgesini ve ürün adını, liste ise filtreden bağımsız bir özet döndürüyor (durum başına sayılar, devam eden, toplam ücret, ortalama çözüm süresi). Geçersiz durum filtresi artık 422 veriyor. `DELETE /service-records/{id}` eklendi; bağlı fotoğraflar ürün belgesi olarak kalıyor. PostgreSQL sözleşme testleri yerelde geçti.
    Mobil: servis geçmişi ekranında özet kartı ve sayılı durum filtreleri; kayda dokununca bilgiler, çözüm süresi ve zaman çizelgesinin gösterildiği detay ekranı açılıyor, silme onay istiyor. Güncelleme sayfasına ücret alanı (Türkçe "1.250,50" biçimi de kabul ediliyor) ve durum değişince görünen "durum notu" eklendi. Ürün detayındaki servis kayıtları da detay ekranını açıyor. Mobil testler: 54/54.
+13. **V2(d) Analitik / dashboard iyileştirmeleri** — backend: `/dashboard` yanıtına `analytics` eklendi: garanti altındaki toplam değer, garantisi süren ürün oranı, önümüzdeki 12 ayda biten garantiler, son 12 ayın alımları (tutar en çok harcanan para biriminde), en çok ürünü olan 5 marka (büyük/küçük harf duyarsız) ve servis özeti (toplam/devam eden/çözülen, ödenen ücret, ortalama çözüm süresi). Mobil: "Özet" ekranında değer kartı ve oran çubuğu, iki aylık sütun grafiği (grafik kütüphanesi eklenmedi; her sütun ekran okuyucuya "Kasım 2026: 2 garanti bitiyor" gibi okunuyor), servis özeti ve marka listesi. Eski backend'den `analytics` gelmezse bölüm gizleniyor. Mobil testler: 57/57.
 
 ## Kalanlar / sonraki adımlar
 - [ ] CI'da mobil analiz/test sonuçlarını kontrol edip olası hataları düzeltmek
 - [x] V2: barkod/QR ve seri numarası tarama
 - [x] V2: Gemini ile AI arıza asistanı (backend + mobil)
 - [x] V2: servis geçmişi iyileştirmeleri (zaman çizelgesi, ücret, özet)
+- [x] V2: analitik / dashboard iyileştirmeleri
 - [ ] V2: servis merkezi bulma, aile hesabı, bulut yedekleme
 - [x] Refresh token, şifre sıfırlama iskeleti
 - [ ] E-posta doğrulama ve gerçek SMTP gönderici
