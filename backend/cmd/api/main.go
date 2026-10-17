@@ -68,9 +68,22 @@ func run(logger *slog.Logger) error {
 		st = memory.New()
 	}
 
-	files, err := storage.NewLocal(cfg.StorageDir)
-	if err != nil {
-		return err
+	var files storage.Storage
+	if cfg.S3Bucket != "" {
+		files, err = storage.NewS3(storage.S3{
+			Endpoint: cfg.S3Endpoint, Bucket: cfg.S3Bucket, Region: cfg.S3Region,
+			AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey, PathStyle: cfg.S3PathStyle,
+			MaxSize: (cfg.MaxUploadMB + 1) << 20,
+		})
+		if err != nil {
+			return err
+		}
+		logger.Info("file storage: S3", "endpoint", cfg.S3Endpoint, "bucket", cfg.S3Bucket)
+	} else {
+		if files, err = storage.NewLocal(cfg.StorageDir); err != nil {
+			return err
+		}
+		logger.Info("file storage: local", "dir", cfg.StorageDir)
 	}
 
 	gem := &extract.GeminiExtractor{

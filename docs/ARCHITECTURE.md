@@ -27,7 +27,7 @@ bu dokümanı okumalıdır.
 | **PostgreSQL + pgx** | İlişkisel veri (kullanıcı → ürün → belge/servis kaydı). `pgx` en yaygın ve hızlı sürücü. |
 | **Gömülü SQL migration'lar** (`embed`) | Ek araç gerektirmez; API açılışta `schema_migrations` tablosuna bakarak sırayla uygular. |
 | **JWT (HS256) + PBKDF2** | Durumsuz kimlik doğrulama, mobil için basit. Access token 1 saat + opak refresh token (30 gün, tek kullanımlık rotasyon, sunucuda SHA-256 özeti). |
-| **Storage arayüzü** — V1'de yerel disk (Docker volume) | MinIO/S3 opsiyoneldir; arayüz sayesinde `S3Storage` sonradan eklenebilir. MVP'de ek servis çalıştırmamak için. |
+| **Storage arayüzü** — varsayılan yerel disk (Docker volume), `S3_BUCKET` verilirse S3 uyumlu depolama (MinIO, AWS S3, R2) | S3 istemcisi yalnızca standart kütüphaneyle SigV4 imzalı; ek bağımlılık yok. MinIO `docker compose --profile s3` ile açılır. |
 | **Redis şimdilik YOK** | V1 bildirimleri cihazda yerel olarak planlanır (internet gerekmez, güvenilir). Sunucu tarafında `notifications` tablosu + Go içinde periyodik işçi (`FOR UPDATE SKIP LOCKED`) yeterli. Redis, V2'de FCM push + kuyruk ihtiyacı doğunca eklenecek. |
 | **Flutter + Riverpod** | Tek kod tabanı ile Android/iOS. Riverpod test edilebilir, BuildContext'e bağlı olmayan durum yönetimi sunar. |
 | **Gemini (backend'de)** | Anahtar mobil uygulamaya gömülmez. Çok modlu model fiş görüntüsünü doğrudan okuyabilir (OCR + çıkarım tek adım). |

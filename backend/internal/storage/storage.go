@@ -1,6 +1,5 @@
 // Package storage stores uploaded files (invoices, warranty cards, photos).
-// V1 uses the local filesystem (a Docker volume); an S3/MinIO implementation can be added
-// behind the same interface without touching handlers.
+// Local uses the filesystem (a Docker volume); S3 talks to any S3-compatible service (MinIO, AWS, R2).
 package storage
 
 import (

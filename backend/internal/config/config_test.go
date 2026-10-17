@@ -63,3 +63,19 @@ func TestSMTPConfig(t *testing.T) {
 		t.Fatalf("defaults %+v", c)
 	}
 }
+
+func TestS3Config(t *testing.T) {
+	env := map[string]string{"S3_BUCKET": "warranty"}
+	if _, err := Load(func(k string) string { return env[k] }); err == nil {
+		t.Fatal("S3_BUCKET without endpoint/keys must fail")
+	}
+	env["S3_ENDPOINT"], env["S3_ACCESS_KEY"], env["S3_SECRET_KEY"] = "http://minio:9000", "ak", "sk"
+	c, err := Load(func(k string) string { return env[k] })
+	if err != nil || !c.S3PathStyle || c.S3Region != "us-east-1" {
+		t.Fatalf("%+v %v", c, err)
+	}
+	env["S3_PATH_STYLE"] = "false"
+	if c, _ = Load(func(k string) string { return env[k] }); c.S3PathStyle {
+		t.Fatal("S3_PATH_STYLE=false ignored")
+	}
+}

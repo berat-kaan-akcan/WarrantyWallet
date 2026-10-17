@@ -33,6 +33,12 @@ type Config struct {
 	SMTPUsername    string
 	SMTPPassword    string
 	SMTPFrom        string
+	S3Endpoint      string // with S3Bucket set, files go to S3/MinIO instead of StorageDir
+	S3Bucket        string
+	S3Region        string
+	S3AccessKey     string
+	S3SecretKey     string
+	S3PathStyle     bool
 }
 
 // Load reads configuration from the environment (getenv is injectable for tests).
@@ -61,6 +67,15 @@ func Load(getenv func(string) string) (Config, error) {
 		SMTPUsername:  strings.TrimSpace(getenv("SMTP_USERNAME")),
 		SMTPPassword:  getenv("SMTP_PASSWORD"),
 		SMTPFrom:      strings.TrimSpace(getenv("SMTP_FROM")),
+		S3Endpoint:    strings.TrimSpace(getenv("S3_ENDPOINT")),
+		S3Bucket:      strings.TrimSpace(getenv("S3_BUCKET")),
+		S3Region:      def(getenv("S3_REGION"), "us-east-1"),
+		S3AccessKey:   strings.TrimSpace(getenv("S3_ACCESS_KEY")),
+		S3SecretKey:   getenv("S3_SECRET_KEY"),
+		S3PathStyle:   !strings.EqualFold(strings.TrimSpace(getenv("S3_PATH_STYLE")), "false"),
+	}
+	if c.S3Bucket != "" && (c.S3Endpoint == "" || c.S3AccessKey == "" || c.S3SecretKey == "") {
+		return c, errors.New("S3_ENDPOINT, S3_ACCESS_KEY and S3_SECRET_KEY are required when S3_BUCKET is set")
 	}
 	if c.SMTPHost != "" && c.SMTPFrom == "" {
 		return c, errors.New("SMTP_FROM is required when SMTP_HOST is set")

@@ -86,6 +86,11 @@ E-posta: `SMTP_HOST`, `SMTP_FROM` (gerekirse `SMTP_PORT`, `SMTP_USERNAME`, `SMTP
 şifre sıfırlama e-postaları gerçekten gönderilir; verilmezse yalnızca maskeli adresle log'a yazılır. Bağlantılar
 `PUBLIC_BASE_URL` (varsayılan `http://localhost:8080`) üzerinden kurulur.
 
+Dosya depolama: varsayılan `STORAGE_DIR` klasörüdür. `S3_BUCKET`, `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`
+verilirse belgeler S3 uyumlu bir depoda (MinIO, AWS S3, Cloudflare R2) tutulur. Yerel MinIO için `.env` içinde
+`S3_ENDPOINT=http://minio:9000`, `S3_BUCKET=warranty`, `S3_ACCESS_KEY=warranty`, `S3_SECRET_KEY=warranty-dev-secret`
+verip `docker compose --profile s3 up --build` çalıştırın (kova otomatik oluşturulur).
+
 ### 3) Mobil uygulamayı çalıştırma
 ```bash
 cd mobile
