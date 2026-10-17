@@ -559,9 +559,13 @@ func (s *Store) AddServiceEvent(ctx context.Context, userID string, e *domain.Se
 	if e.ID == "" {
 		e.ID = domain.NewID()
 	}
-	err := s.db.QueryRowContext(ctx, `INSERT INTO service_events (id, service_record_id, status, note)
-		SELECT $1,$2,$3,$4 WHERE EXISTS (SELECT 1 FROM service_records WHERE id=$2 AND user_id=$5)
-		RETURNING created_at`, e.ID, e.ServiceRecordID, string(e.Status), e.Note, userID).Scan(&e.CreatedAt)
+	var at any // keep a given timestamp (backup import), else now()
+	if !e.CreatedAt.IsZero() {
+		at = e.CreatedAt
+	}
+	err := s.db.QueryRowContext(ctx, `INSERT INTO service_events (id, service_record_id, status, note, created_at)
+		SELECT $1,$2,$3,$4,COALESCE($6::timestamptz, now()) WHERE EXISTS (SELECT 1 FROM service_records WHERE id=$2 AND user_id=$5)
+		RETURNING created_at`, e.ID, e.ServiceRecordID, string(e.Status), e.Note, userID, at).Scan(&e.CreatedAt)
 	return notFound(err)
 }
 

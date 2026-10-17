@@ -339,6 +339,13 @@ func Run(t *testing.T, newStore func(t *testing.T) store.Store) {
 		if _, err := s.ListServiceEvents(ctx, b, sr.ID); !errors.Is(err, domain.ErrNotFound) {
 			t.Fatal("b listed a's events")
 		}
+		past := time.Date(2025, 1, 2, 3, 4, 5, 0, time.UTC) // imported events keep their time
+		if err := s.AddServiceEvent(ctx, a, &domain.ServiceEvent{ServiceRecordID: sr.ID, Status: domain.ServiceOpen, CreatedAt: past}); err != nil {
+			t.Fatal(err)
+		}
+		if evs, _ := s.ListServiceEvents(ctx, a, sr.ID); len(evs) != 3 || !evs[0].CreatedAt.Equal(past) {
+			t.Fatalf("given timestamp not kept %+v", evs)
+		}
 		doc := &domain.Document{UserID: a, ProductID: p.ID, ServiceRecordID: sr.ID, Type: domain.DocPhoto, FileKey: "k"}
 		if err := s.CreateDocument(ctx, doc); err != nil {
 			t.Fatal(err)

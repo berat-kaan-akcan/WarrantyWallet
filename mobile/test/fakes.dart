@@ -101,6 +101,25 @@ class FakeRepository implements WarrantyRepository {
   Future<void> logout(String? refreshToken) async =>
       calls.add('logout:$refreshToken');
 
+  Uint8List backup = Uint8List.fromList([80, 75, 5, 6]);
+  ImportSummary importResult = const ImportSummary(
+      products: 2,
+      serviceRecords: 1,
+      documents: 3,
+      skippedDuplicates: 1,
+      failed: 1,
+      errors: ['"Kettle" belgesi atlandı: dosya türü desteklenmiyor']);
+  final imported = <Uint8List>[];
+
+  @override
+  Future<Uint8List> exportBackup() async => backup;
+
+  @override
+  Future<ImportSummary> importBackup(Uint8List zip) async {
+    imported.add(zip);
+    return importResult;
+  }
+
   @override
   Future<void> registerDevice(String token, String platform) async =>
       calls.add('device+:$token:$platform');
@@ -330,4 +349,16 @@ class FakePushService implements PushService {
 
   @override
   String get platform => 'android';
+}
+
+class FakeBackupFiles implements BackupFiles {
+  final shared = <String, Uint8List>{};
+  Uint8List? toPick;
+
+  @override
+  Future<void> share(Uint8List bytes, String filename) async =>
+      shared[filename] = bytes;
+
+  @override
+  Future<Uint8List?> pickZip() async => toPick;
 }

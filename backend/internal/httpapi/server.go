@@ -34,6 +34,7 @@ type Server struct {
 	Hasher        auth.Hasher
 	Logger        *slog.Logger
 	MaxUpload     int64 // bytes
+	MaxImport     int64 // backup archive bytes (default DefaultMaxImport)
 	AdminEmails   []string
 	CORSOrigins   string
 	Now           func() time.Time
@@ -91,6 +92,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("PATCH /api/v1/me", a(http.HandlerFunc(s.handleUpdateMe)))
 	mux.Handle("PUT /api/v1/me/password", a(http.HandlerFunc(s.handleChangePassword)))
 	mux.Handle("DELETE /api/v1/me", a(http.HandlerFunc(s.handleDeleteMe)))
+	mux.Handle("GET /api/v1/me/export", a(http.HandlerFunc(s.handleExport)))
+	mux.Handle("POST /api/v1/me/import", a(s.extractLimiter.wrap(http.HandlerFunc(s.handleImport))))
 
 	mux.Handle("GET /api/v1/categories", a(http.HandlerFunc(s.handleCategories)))
 

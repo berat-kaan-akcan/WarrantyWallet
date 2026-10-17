@@ -31,6 +31,8 @@ abstract class WarrantyRepository {
   Future<void> deleteAccount();
   Future<void> logout(String? refreshToken);
   Future<void> registerDevice(String token, String platform);
+  Future<Uint8List> exportBackup();
+  Future<ImportSummary> importBackup(Uint8List zip);
   Future<void> unregisterDevice(String token);
   Future<void> forgotPassword(String email);
 
@@ -127,6 +129,14 @@ class ApiWarrantyRepository implements WarrantyRepository {
   Future<void> logout(String? refreshToken) async {
     await api.post('/auth/logout', {'refresh_token': refreshToken ?? ''});
   }
+
+  @override
+  Future<Uint8List> exportBackup() => api.download('/me/export');
+
+  @override
+  Future<ImportSummary> importBackup(Uint8List zip) async =>
+      ImportSummary.fromJson(
+          await api.postBytes('/me/import', zip, 'application/zip'));
 
   @override
   Future<void> registerDevice(String token, String platform) async {

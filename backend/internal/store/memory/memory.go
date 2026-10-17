@@ -476,7 +476,10 @@ func (s *Store) AddServiceEvent(_ context.Context, userID string, e *domain.Serv
 	if e.ID == "" {
 		e.ID = domain.NewID()
 	}
-	e.CreatedAt = s.now().UTC()
+	if e.CreatedAt.IsZero() {
+		e.CreatedAt = s.now()
+	}
+	e.CreatedAt = e.CreatedAt.UTC()
 	s.events[e.ServiceRecordID] = append(s.events[e.ServiceRecordID], *e)
 	return nil
 }
@@ -489,7 +492,9 @@ func (s *Store) ListServiceEvents(_ context.Context, userID, recordID string) ([
 	if !ok || r.UserID != userID {
 		return nil, domain.ErrNotFound
 	}
-	return append([]domain.ServiceEvent{}, s.events[recordID]...), nil
+	out := append([]domain.ServiceEvent{}, s.events[recordID]...)
+	sort.SliceStable(out, func(i, j int) bool { return out[i].CreatedAt.Before(out[j].CreatedAt) })
+	return out, nil
 }
 
 // ReplaceNotifications replaces a product's pending reminders (sent ones are kept).

@@ -669,3 +669,31 @@ class DashboardAnalytics {
   final double serviceCost;
   final double? avgResolutionDays;
 }
+
+/// Result of restoring a backup archive.
+class ImportSummary {
+  const ImportSummary({
+    this.products = 0,
+    this.serviceRecords = 0,
+    this.documents = 0,
+    this.skippedDuplicates = 0,
+    this.failed = 0,
+    this.errors = const [],
+  });
+
+  factory ImportSummary.fromJson(Map<String, dynamic> j) => ImportSummary(
+        products: (j['products'] as num?)?.toInt() ?? 0,
+        serviceRecords: (j['service_records'] as num?)?.toInt() ?? 0,
+        documents: (j['documents'] as num?)?.toInt() ?? 0,
+        skippedDuplicates: (j['skipped_duplicates'] as num?)?.toInt() ?? 0,
+        failed: (j['failed'] as num?)?.toInt() ?? 0,
+        errors: [for (final e in (j['errors'] as List?) ?? const []) '$e'],
+      );
+
+  final int products;
+  final int serviceRecords;
+  final int documents;
+  final int skippedDuplicates;
+  final int failed;
+  final List<String> errors;
+}

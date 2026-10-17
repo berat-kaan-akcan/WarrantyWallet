@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
+import 'backup_screen.dart';
 import 'change_password_screen.dart';
 
 /// Hesap ve uygulama ayarları.
@@ -95,6 +96,14 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Şifreyi değiştir'),
             onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
                 builder: (_) => const ChangePasswordScreen())),
+          ),
+          ListTile(
+            key: const Key('backup'),
+            leading: const Icon(Icons.backup_outlined),
+            title: const Text('Yedekleme'),
+            subtitle: const Text('Tüm kayıtları dışa aktar veya geri yükle'),
+            onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const BackupScreen())),
           ),
           const ListTile(
             leading: Icon(Icons.notifications_active),

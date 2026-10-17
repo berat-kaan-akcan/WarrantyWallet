@@ -146,6 +146,28 @@ E-postadaki bağlantı buraya gelir (`PUBLIC_BASE_URL` + bu yol). Tarayıcıda T
 ### `DELETE /me` (auth)
 `204` — hesap, ürünler, belgeler (dosyalar dahil), servis kayıtları ve bildirimler silinir (KVKK silme hakkı).
 
+### `GET /me/export` (auth) → `application/zip`
+Hesabın yedeği (KVKK veri taşınabilirliği): `backup.json` + `files/` altında tüm belgeler.
+`Content-Disposition: attachment; filename="warranty-wallet-yedek-2026-10-17.zip"`.
+```json
+{"format":"warranty-wallet-backup","version":1,"exported_at":"...","account":{"email":"...","name":"..."},
+ "products":[{"ref":"<eski id>","name":"...","purchase_date":"2026-09-12","warranty_months":24,"...":"...",
+   "service_records":[{"ref":"...","problem":"screen_lines","status":"resolved","cost":350,"events":[...]}],
+   "documents":[{"ref":"...","type":"invoice","original_name":"fatura.jpg","file":"files/<id>.jpg"}]}]}
+```
+Parolalar, token'lar ve hatırlatıcı durumları yedeğe girmez.
+
+### `POST /me/import` (auth, gövde: yedek .zip, `Content-Type: application/zip`, en fazla 200 MB, 20 istek/dk)
+Yedeği mevcut hesaba **ekler** (hiçbir şey silinmez). Aynı ad + alış tarihi + seri numarasına sahip ürünler atlanır,
+bu yüzden aynı yedeği iki kez yüklemek kopya oluşturmaz. Garanti bitişi ve hatırlatıcılar yeniden hesaplanır,
+belgelerin türü yine içerikten (magic bytes) belirlenir.
+`200`:
+```json
+{"products":3,"service_records":1,"documents":4,"skipped_duplicates":0,"failed":1,
+ "errors":["\"Kettle\" belgesi atlandı: dosya türü desteklenmiyor"]}
+```
+Hatalar: `422 invalid_backup` (zip değil, `backup.json` yok, biçim/sürüm uyumsuz), `413 too_large`.
+
 ---
 
 ## Ürünler

@@ -13,6 +13,7 @@ final ocrServiceProvider = Provider<OcrService>((ref) => MlKitOcrService());
 final reminderSchedulerProvider =
     Provider<ReminderScheduler>((ref) => LocalReminderScheduler());
 final pushServiceProvider = Provider<PushService>((ref) => NoopPushService());
+final backupFilesProvider = Provider<BackupFiles>((ref) => DeviceBackupFiles());
 
 final repositoryProvider = Provider<WarrantyRepository>((ref) {
   final tokens = ref.watch(tokenStoreProvider);

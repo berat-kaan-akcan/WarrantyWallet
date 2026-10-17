@@ -143,6 +143,22 @@ class ApiClient {
     return res.bodyBytes;
   }
 
+  /// Uploads a raw body (backup archive) and decodes the JSON answer.
+  Future<Map<String, dynamic>> postBytes(
+          String path, Uint8List body, String contentType) async =>
+      _decode(await _send(() async {
+        final headers = await _headers(json: false);
+        headers['Content-Type'] = contentType;
+        return _client.post(uri(path), headers: headers, body: body);
+      }, timeout: _uploadTimeout));
+
+  /// Downloads a large body (backup archive) with the upload timeout.
+  Future<Uint8List> download(String path) async => (await _send(
+          () async =>
+              _client.get(uri(path), headers: await _headers(json: false)),
+          timeout: _uploadTimeout))
+      .bodyBytes;
+
   /// Multipart upload. [files] maps field name → (bytes, filename).
   Future<Map<String, dynamic>> multipart(
     String path, {

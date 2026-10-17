@@ -1,7 +1,12 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -295,4 +300,35 @@ class NoopPushService implements PushService {
 
   @override
   String get platform => 'android';
+}
+
+/// Saving and picking backup archives. The share sheet lets the user keep the backup in
+/// Google Drive, iCloud Drive, e-mail, etc.
+abstract class BackupFiles {
+  Future<void> share(Uint8List bytes, String filename);
+
+  /// Lets the user choose a backup `.zip`; null when cancelled.
+  Future<Uint8List?> pickZip();
+}
+
+class DeviceBackupFiles implements BackupFiles {
+  @override
+  Future<void> share(Uint8List bytes, String filename) async {
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/$filename');
+    await file.writeAsBytes(bytes, flush: true);
+    await Share.shareXFiles([XFile(file.path, mimeType: 'application/zip')],
+        subject: filename);
+  }
+
+  @override
+  Future<Uint8List?> pickZip() async {
+    final res = await FilePicker.pickFiles(
+        type: FileType.custom, allowedExtensions: ['zip'], withData: true);
+    final file = res?.files.singleOrNull;
+    if (file == null) return null;
+    if (file.bytes != null) return file.bytes;
+    final path = file.path;
+    return path == null ? null : File(path).readAsBytes();
+  }
 }

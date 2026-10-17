@@ -35,7 +35,8 @@ List<Override> overrides(FakeRepository repo,
     {String? token,
     FakeReminderScheduler? scheduler,
     FakeCodeScanner? scanner,
-    PushService? push}) {
+    PushService? push,
+    BackupFiles? backup}) {
   final tokens = MemoryTokenStore()..token = token;
   return [
     repositoryProvider.overrideWithValue(repo),
@@ -46,6 +47,7 @@ List<Override> overrides(FakeRepository repo,
     imageSourceProvider.overrideWithValue(FakePicker()),
     codeScannerProvider.overrideWithValue(scanner ?? FakeCodeScanner()),
     pushServiceProvider.overrideWithValue(push ?? FakePushService()),
+    backupFilesProvider.overrideWithValue(backup ?? FakeBackupFiles()),
   ];
 }
 
