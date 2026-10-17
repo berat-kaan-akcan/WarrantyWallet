@@ -54,7 +54,9 @@ func normalizeInviteCode(c string) string {
 	}, strings.ToUpper(strings.TrimSpace(c)))
 }
 
-func inviteHash(code string) string { return auth.HashOpaqueToken("family:" + normalizeInviteCode(code)) }
+func inviteHash(code string) string {
+	return auth.HashOpaqueToken("family:" + normalizeInviteCode(code))
+}
 
 type familyView struct {
 	Family  *domain.Family            `json:"family"`
