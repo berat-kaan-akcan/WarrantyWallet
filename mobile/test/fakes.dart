@@ -111,6 +111,30 @@ class FakeRepository implements WarrantyRepository {
       errors: ['"Kettle" belgesi atlandı: dosya türü desteklenmiyor']);
   final imported = <Uint8List>[];
 
+  final centerQueries = <String>[];
+
+  @override
+  Future<ServiceCenterSearch> serviceCenters(String productId,
+      {String city = ''}) async {
+    centerQueries.add('$productId:$city');
+    final items = [
+      const ServiceCenter(
+          id: 'c1',
+          brand: 'ASUS',
+          name: 'ASUS Kadıköy Servis',
+          city: 'İstanbul',
+          district: 'Kadıköy',
+          phone: '+90 (216) 000 00 00',
+          distanceKm: 2.4),
+    ];
+    return ServiceCenterSearch(
+      brand: 'ASUS',
+      items: city.isEmpty || city == 'İstanbul' ? items : const [],
+      mapsSearchUrl:
+          'https://www.google.com/maps/search/?api=1&query=ASUS+yetkili+servis+${Uri.encodeQueryComponent(city)}',
+    );
+  }
+
   FamilyInfo familyInfo = const FamilyInfo();
   String inviteCode = 'K7QM-2XRP';
   List<FamilyProduct> familyItems = [];
@@ -421,4 +445,15 @@ class FakeBackupFiles implements BackupFiles {
 
   @override
   Future<Uint8List?> pickZip() async => toPick;
+}
+
+class FakeLinkOpener implements LinkOpener {
+  final opened = <Uri>[];
+  bool result = true;
+
+  @override
+  Future<bool> open(Uri uri) async {
+    opened.add(uri);
+    return result;
+  }
 }

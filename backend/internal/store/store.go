@@ -79,6 +79,13 @@ type Store interface {
 	RemoveFamilyMember(ctx context.Context, familyID, userID string) error // ErrNotFound when not a member
 	DeleteFamily(ctx context.Context, familyID string) error
 
+	// Service centers; brand/city filters match domain.FoldKey values ("" = any).
+	ListServiceCenters(ctx context.Context, brand, city string) ([]domain.ServiceCenter, error)
+	GetServiceCenter(ctx context.Context, id string) (domain.ServiceCenter, error)
+	CreateServiceCenter(ctx context.Context, c *domain.ServiceCenter) error
+	UpdateServiceCenter(ctx context.Context, c *domain.ServiceCenter) error
+	DeleteServiceCenter(ctx context.Context, id string) error
+
 	CreateExtractionLog(ctx context.Context, l *domain.ExtractionLog) error
 	ListExtractionLogs(ctx context.Context, onlyFailures bool, limit int) ([]domain.ExtractionLog, error)
 

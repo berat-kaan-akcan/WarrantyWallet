@@ -761,3 +761,62 @@ class FamilyProduct {
   final String ownerId;
   final String ownerName;
 }
+
+/// An authorized service center (admin-maintained list).
+class ServiceCenter {
+  const ServiceCenter({
+    required this.id,
+    required this.brand,
+    required this.name,
+    required this.city,
+    this.district = '',
+    this.address = '',
+    this.phone = '',
+    this.website = '',
+    this.distanceKm,
+  });
+
+  factory ServiceCenter.fromJson(Map<String, dynamic> j) => ServiceCenter(
+        id: '${j['id'] ?? ''}',
+        brand: '${j['brand'] ?? ''}',
+        name: '${j['name'] ?? ''}',
+        city: '${j['city'] ?? ''}',
+        district: '${j['district'] ?? ''}',
+        address: '${j['address'] ?? ''}',
+        phone: '${j['phone'] ?? ''}',
+        website: '${j['website'] ?? ''}',
+        distanceKm: (j['distance_km'] as num?)?.toDouble(),
+      );
+
+  final String id;
+  final String brand;
+  final String name;
+  final String city;
+  final String district;
+  final String address;
+  final String phone;
+  final String website;
+  final double? distanceKm;
+
+  String get place => district.isEmpty ? city : '$district, $city';
+}
+
+/// Result of a service-center search: known centers plus a map search fallback.
+class ServiceCenterSearch {
+  const ServiceCenterSearch(
+      {this.brand = '', this.items = const [], required this.mapsSearchUrl});
+
+  factory ServiceCenterSearch.fromJson(Map<String, dynamic> j) =>
+      ServiceCenterSearch(
+        brand: '${j['brand'] ?? ''}',
+        items: [
+          for (final c in (j['items'] as List?) ?? const [])
+            ServiceCenter.fromJson(c as Map<String, dynamic>)
+        ],
+        mapsSearchUrl: '${j['maps_search_url'] ?? ''}',
+      );
+
+  final String brand;
+  final List<ServiceCenter> items;
+  final String mapsSearchUrl;
+}

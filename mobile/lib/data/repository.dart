@@ -33,6 +33,8 @@ abstract class WarrantyRepository {
   Future<void> registerDevice(String token, String platform);
   Future<Uint8List> exportBackup();
   Future<FamilyInfo> family();
+  Future<ServiceCenterSearch> serviceCenters(String productId,
+      {String city = ''});
   Future<FamilyInfo> createFamily(String name);
   Future<String> createFamilyInvite();
   Future<FamilyInfo> joinFamily(String code);
@@ -135,6 +137,13 @@ class ApiWarrantyRepository implements WarrantyRepository {
   Future<void> logout(String? refreshToken) async {
     await api.post('/auth/logout', {'refresh_token': refreshToken ?? ''});
   }
+
+  @override
+  Future<ServiceCenterSearch> serviceCenters(String productId,
+          {String city = ''}) async =>
+      ServiceCenterSearch.fromJson(await api.get(
+          '/products/$productId/service-centers',
+          query: {if (city.trim().isNotEmpty) 'city': city.trim()}));
 
   @override
   Future<FamilyInfo> family() async =>

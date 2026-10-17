@@ -932,3 +932,78 @@ func (s *Store) DeleteFamily(ctx context.Context, familyID string) error {
 	}
 	return affected(s.db.ExecContext(ctx, `DELETE FROM families WHERE id=$1`, familyID))
 }
+
+// ---- service centers ----
+
+const centerCols = `id, brand, name, city, district, address, phone, website, lat, lng, created_at, updated_at`
+
+func scanCenter(row interface{ Scan(...any) error }) (domain.ServiceCenter, error) {
+	var c domain.ServiceCenter
+	var lat, lng sql.NullFloat64
+	err := row.Scan(&c.ID, &c.Brand, &c.Name, &c.City, &c.District, &c.Address, &c.Phone, &c.Website, &lat, &lng, &c.CreatedAt, &c.UpdatedAt)
+	if lat.Valid && lng.Valid {
+		c.Lat, c.Lng = &lat.Float64, &lng.Float64
+	}
+	return c, err
+}
+
+// ListServiceCenters filters by folded brand/city, ordered by city then name.
+func (s *Store) ListServiceCenters(ctx context.Context, brand, city string) ([]domain.ServiceCenter, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT `+centerCols+` FROM service_centers
+		WHERE ($1 = '' OR brand_key = $1) AND ($2 = '' OR city_key = $2)
+		ORDER BY city, name, id`, domain.FoldKey(brand), domain.FoldKey(city))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []domain.ServiceCenter{}
+	for rows.Next() {
+		c, err := scanCenter(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+// GetServiceCenter returns one center.
+func (s *Store) GetServiceCenter(ctx context.Context, id string) (domain.ServiceCenter, error) {
+	if !validUUID(id) {
+		return domain.ServiceCenter{}, domain.ErrNotFound
+	}
+	c, err := scanCenter(s.db.QueryRowContext(ctx, `SELECT `+centerCols+` FROM service_centers WHERE id=$1`, id))
+	return c, notFound(err)
+}
+
+// CreateServiceCenter stores a new center.
+func (s *Store) CreateServiceCenter(ctx context.Context, c *domain.ServiceCenter) error {
+	if c.ID == "" {
+		c.ID = domain.NewID()
+	}
+	return s.db.QueryRowContext(ctx, `INSERT INTO service_centers (id, brand, brand_key, name, city, city_key, district,
+		address, phone, website, lat, lng) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING created_at, updated_at`,
+		c.ID, c.Brand, domain.FoldKey(c.Brand), c.Name, c.City, domain.FoldKey(c.City), c.District, c.Address, c.Phone,
+		c.Website, c.Lat, c.Lng).Scan(&c.CreatedAt, &c.UpdatedAt)
+}
+
+// UpdateServiceCenter replaces a center's fields.
+func (s *Store) UpdateServiceCenter(ctx context.Context, c *domain.ServiceCenter) error {
+	if !validUUID(c.ID) {
+		return domain.ErrNotFound
+	}
+	err := s.db.QueryRowContext(ctx, `UPDATE service_centers SET brand=$2, brand_key=$3, name=$4, city=$5, city_key=$6,
+		district=$7, address=$8, phone=$9, website=$10, lat=$11, lng=$12, updated_at=now() WHERE id=$1
+		RETURNING created_at, updated_at`,
+		c.ID, c.Brand, domain.FoldKey(c.Brand), c.Name, c.City, domain.FoldKey(c.City), c.District, c.Address, c.Phone,
+		c.Website, c.Lat, c.Lng).Scan(&c.CreatedAt, &c.UpdatedAt)
+	return notFound(err)
+}
+
+// DeleteServiceCenter removes a center.
+func (s *Store) DeleteServiceCenter(ctx context.Context, id string) error {
+	if !validUUID(id) {
+		return domain.ErrNotFound
+	}
+	return affected(s.db.ExecContext(ctx, `DELETE FROM service_centers WHERE id=$1`, id))
+}

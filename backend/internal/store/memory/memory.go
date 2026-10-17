@@ -28,6 +28,7 @@ type Store struct {
 	devices    map[string]domain.DeviceToken
 	families   map[string]domain.Family
 	members    map[string]familyMember // by user id
+	centers    map[string]domain.ServiceCenter
 	now        func() time.Time
 }
 
@@ -41,7 +42,8 @@ func New() *Store {
 		notifs: map[string]domain.Notification{}, categories: map[string]domain.Category{},
 		tokens: map[string]domain.AuthToken{}, devices: map[string]domain.DeviceToken{},
 		families: map[string]domain.Family{}, members: map[string]familyMember{},
-		now: time.Now,
+		centers: map[string]domain.ServiceCenter{},
+		now:     time.Now,
 	}
 	for _, c := range domain.DefaultCategories {
 		s.categories[c.Slug] = c
@@ -811,4 +813,78 @@ func (s *Store) deleteFamilyLocked(familyID string) {
 			delete(s.members, uid)
 		}
 	}
+}
+
+// ---- service centers ----
+
+// ListServiceCenters filters by folded brand/city, ordered by city then name.
+func (s *Store) ListServiceCenters(_ context.Context, brand, city string) ([]domain.ServiceCenter, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	b, c := domain.FoldKey(brand), domain.FoldKey(city)
+	out := []domain.ServiceCenter{}
+	for _, sc := range s.centers {
+		if (b == "" || domain.FoldKey(sc.Brand) == b) && (c == "" || domain.FoldKey(sc.City) == c) {
+			out = append(out, sc)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].City != out[j].City {
+			return out[i].City < out[j].City
+		}
+		if out[i].Name != out[j].Name {
+			return out[i].Name < out[j].Name
+		}
+		return out[i].ID < out[j].ID
+	})
+	return out, nil
+}
+
+// GetServiceCenter returns one center.
+func (s *Store) GetServiceCenter(_ context.Context, id string) (domain.ServiceCenter, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	sc, ok := s.centers[id]
+	if !ok {
+		return sc, domain.ErrNotFound
+	}
+	return sc, nil
+}
+
+// CreateServiceCenter stores a new center.
+func (s *Store) CreateServiceCenter(_ context.Context, c *domain.ServiceCenter) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if c.ID == "" {
+		c.ID = domain.NewID()
+	}
+	c.CreatedAt = s.now().UTC()
+	c.UpdatedAt = c.CreatedAt
+	s.centers[c.ID] = *c
+	return nil
+}
+
+// UpdateServiceCenter replaces a center's fields.
+func (s *Store) UpdateServiceCenter(_ context.Context, c *domain.ServiceCenter) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	old, ok := s.centers[c.ID]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	c.CreatedAt = old.CreatedAt
+	c.UpdatedAt = s.now().UTC()
+	s.centers[c.ID] = *c
+	return nil
+}
+
+// DeleteServiceCenter removes a center.
+func (s *Store) DeleteServiceCenter(_ context.Context, id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.centers[id]; !ok {
+		return domain.ErrNotFound
+	}
+	delete(s.centers, id)
+	return nil
 }

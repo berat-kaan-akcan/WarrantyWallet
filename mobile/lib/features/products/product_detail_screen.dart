@@ -11,6 +11,7 @@ import '../../services/services.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
 import '../service/report_issue_screen.dart';
+import '../service/service_centers_screen.dart';
 import '../service/service_history_screen.dart';
 import 'add_product_screen.dart';
 import 'document_viewer.dart';
@@ -182,32 +183,6 @@ class _ProductDetail extends ConsumerWidget {
     );
   }
 
-  void _showAuthorizedService(BuildContext context) {
-    final brand = product.brand.isEmpty ? product.name : product.brand;
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Yetkili Servis', style: Theme.of(ctx).textTheme.titleLarge),
-              const SizedBox(height: 12),
-              Text(
-                  '$brand yetkili servislerini üreticinin resmi sitesinden veya "$brand yetkili servis" '
-                  'aramasıyla bulabilirsiniz. Servise giderken "Servis Kaydı Oluştur" ile belge paketinizi hazırlayın.'),
-              const SizedBox(height: 8),
-              const Text(
-                  'Harita üzerinde yakındaki servisleri bulma özelliği V2 yol haritasında.'),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = product;
@@ -316,8 +291,10 @@ class _ProductDetail extends ConsumerWidget {
             ),
             _ActionTile(
                 icon: Icons.home_repair_service,
-                title: 'Yetkili Servis',
-                onTap: () => _showAuthorizedService(context)),
+                title: 'Yetkili Servis Bul',
+                subtitle: 'Servis merkezleri ve harita araması',
+                onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                    builder: (_) => ServiceCentersScreen(product: p)))),
             _ActionTile(
               icon: Icons.notifications,
               title: 'Hatırlatıcılar',

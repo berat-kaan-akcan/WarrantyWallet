@@ -47,6 +47,50 @@ func Run(t *testing.T, newStore func(t *testing.T) store.Store) {
 		}
 	})
 
+	t.Run("service_centers", func(t *testing.T) {
+		s := newStore(t)
+		lat, lng := 41.0, 29.0
+		a := &domain.ServiceCenter{Brand: "ASUS", Name: "Merkez Servis", City: "İstanbul", District: "Kadıköy", Lat: &lat, Lng: &lng}
+		if err := s.CreateServiceCenter(ctx, a); err != nil || a.ID == "" || a.CreatedAt.IsZero() {
+			t.Fatalf("create %v %+v", err, a)
+		}
+		_ = s.CreateServiceCenter(ctx, &domain.ServiceCenter{Brand: "Asus", Name: "Ankara Servis", City: "Ankara"})
+		_ = s.CreateServiceCenter(ctx, &domain.ServiceCenter{Brand: "Arçelik", Name: "Arçelik Servis", City: "ISTANBUL"})
+		if l, _ := s.ListServiceCenters(ctx, "asus", ""); len(l) != 2 || l[0].City != "Ankara" {
+			t.Fatalf("by brand %+v", l)
+		}
+		if l, _ := s.ListServiceCenters(ctx, "", "istanbul"); len(l) != 2 {
+			t.Fatalf("by city (folded) %+v", l)
+		}
+		l, _ := s.ListServiceCenters(ctx, "ARCELIK", "İstanbul")
+		if len(l) != 1 || l[0].Lat != nil {
+			t.Fatalf("brand+city %+v", l)
+		}
+		got, err := s.GetServiceCenter(ctx, a.ID)
+		if err != nil || got.Lat == nil || *got.Lat != 41.0 || got.District != "Kadıköy" {
+			t.Fatalf("get %+v %v", got, err)
+		}
+		got.Name, got.City, got.Lat, got.Lng = "Yeni Ad", "İzmir", nil, nil
+		if err := s.UpdateServiceCenter(ctx, &got); err != nil {
+			t.Fatal(err)
+		}
+		if l, _ := s.ListServiceCenters(ctx, "asus", "izmir"); len(l) != 1 || l[0].Name != "Yeni Ad" || l[0].Lat != nil {
+			t.Fatalf("after update %+v", l)
+		}
+		if err := s.UpdateServiceCenter(ctx, &domain.ServiceCenter{ID: domain.NewID()}); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatalf("update missing %v", err)
+		}
+		if err := s.DeleteServiceCenter(ctx, a.ID); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := s.GetServiceCenter(ctx, a.ID); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatal("not deleted")
+		}
+		if err := s.DeleteServiceCenter(ctx, a.ID); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatalf("delete twice %v", err)
+		}
+	})
+
 	t.Run("families", func(t *testing.T) {
 		s := newStore(t)
 		a, b, c := mkUser(t, s, "fam-a@x.io"), mkUser(t, s, "fam-b@x.io"), mkUser(t, s, "fam-c@x.io")

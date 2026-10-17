@@ -29,6 +29,7 @@
       <button type="button" data-tab="users">Kullanıcılar</button>
       <button type="button" data-tab="logs">Yapay zekâ kayıtları</button>
       <button type="button" data-tab="categories">Kategoriler</button>
+      <button type="button" data-tab="centers">Servis merkezleri</button>
     </nav>
 
     <section id="tab-stats" aria-labelledby="stats-title">
@@ -77,6 +78,30 @@
       <table>
         <thead><tr><th scope="col">Slug</th><th scope="col">Ad</th><th scope="col">İşlem</th></tr></thead>
         <tbody id="categories"></tbody>
+      </table>
+    </section>
+
+    <section id="tab-centers" aria-labelledby="centers-title" hidden>
+      <h2 id="centers-title">Yetkili servis merkezleri</h2>
+      <p>Mobil uygulamadaki "Yetkili servis bul" bu listeyi kullanır; listede olmayan marka ve şehirler için Google Haritalar araması gösterilir.</p>
+      <form id="center-form">
+        <input id="center-id" type="hidden">
+        <label>Marka <input id="center-brand" maxlength="60" required placeholder="ASUS"></label>
+        <label>Servis adı <input id="center-name" maxlength="120" required></label>
+        <label>Şehir <input id="center-city" maxlength="60" required placeholder="İstanbul"></label>
+        <label>İlçe <input id="center-district" maxlength="60"></label>
+        <label>Adres <input id="center-address" maxlength="300"></label>
+        <label>Telefon <input id="center-phone" maxlength="30" inputmode="tel"></label>
+        <label>Web sitesi <input id="center-website" type="url" maxlength="200" placeholder="https://"></label>
+        <label>Enlem <input id="center-lat" type="number" step="any" min="-90" max="90"></label>
+        <label>Boylam <input id="center-lng" type="number" step="any" min="-180" max="180"></label>
+        <button type="submit" id="center-submit">Ekle</button>
+        <button type="button" id="center-cancel" hidden>Vazgeç</button>
+      </form>
+      <label>Ara <input id="center-filter" type="search" placeholder="marka veya şehir"></label>
+      <table>
+        <thead><tr><th scope="col">Marka</th><th scope="col">Ad</th><th scope="col">Şehir</th><th scope="col">Telefon</th><th scope="col">Konum</th><th scope="col">İşlem</th></tr></thead>
+        <tbody id="centers"></tbody>
       </table>
     </section>
   </main>

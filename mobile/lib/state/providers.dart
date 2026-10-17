@@ -13,6 +13,8 @@ final ocrServiceProvider = Provider<OcrService>((ref) => MlKitOcrService());
 final reminderSchedulerProvider =
     Provider<ReminderScheduler>((ref) => LocalReminderScheduler());
 final pushServiceProvider = Provider<PushService>((ref) => NoopPushService());
+final linkOpenerProvider =
+    Provider<LinkOpener>((ref) => UrlLauncherLinkOpener());
 final backupFilesProvider = Provider<BackupFiles>((ref) => DeviceBackupFiles());
 
 final repositoryProvider = Provider<WarrantyRepository>((ref) {
@@ -267,3 +269,11 @@ final familyProvider =
 
 final familyProductsProvider = FutureProvider<List<FamilyProduct>>(
     (ref) => ref.watch(repositoryProvider).familyProducts());
+
+/// City typed in the service-center finder, kept for the session.
+final serviceCityProvider = StateProvider<String>((_) => '');
+
+final serviceCentersProvider =
+    FutureProvider.family<ServiceCenterSearch, String>((ref, productId) => ref
+        .watch(repositoryProvider)
+        .serviceCenters(productId, city: ref.watch(serviceCityProvider)));

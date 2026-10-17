@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -323,7 +324,7 @@ class DeviceBackupFiles implements BackupFiles {
 
   @override
   Future<Uint8List?> pickZip() async {
-    final res = await FilePicker.pickFiles(
+    final res = await FilePicker.platform.pickFiles(
         type: FileType.custom, allowedExtensions: ['zip'], withData: true);
     final file = res?.files.singleOrNull;
     if (file == null) return null;
@@ -331,4 +332,15 @@ class DeviceBackupFiles implements BackupFiles {
     final path = file.path;
     return path == null ? null : File(path).readAsBytes();
   }
+}
+
+/// Opens phone numbers, websites and map searches in other apps.
+abstract class LinkOpener {
+  Future<bool> open(Uri uri);
+}
+
+class UrlLauncherLinkOpener implements LinkOpener {
+  @override
+  Future<bool> open(Uri uri) =>
+      launchUrl(uri, mode: LaunchMode.externalApplication);
 }

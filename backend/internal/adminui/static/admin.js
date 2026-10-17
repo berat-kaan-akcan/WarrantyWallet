@@ -9,6 +9,7 @@ let token = sessionStorage.getItem('ww_admin_token') || '';
 let refreshToken = sessionStorage.getItem('ww_admin_refresh') || '';
 let me = null;
 let users = [];
+let centers = [];
 
 function say(text, isError = false) {
   const m = $('message');
@@ -29,6 +30,7 @@ const MESSAGES = {
   rate_limited: 'Çok fazla deneme yapıldı, biraz sonra tekrar deneyin.',
   forbidden: 'Bu işlem için yönetici yetkisi gerekiyor.',
   not_found: 'Kayıt bulunamadı.',
+  validation_failed: 'Lütfen alanları kontrol edin (telefon, web sitesi, enlem/boylam birlikte).',
 };
 
 let refreshing = null;
@@ -149,10 +151,10 @@ async function show(tab) {
     if (b.dataset.tab === tab) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
   }
-  for (const t of ['stats', 'users', 'logs', 'categories']) $('tab-' + t).hidden = t !== tab;
+  for (const t of ['stats', 'users', 'logs', 'categories', 'centers']) $('tab-' + t).hidden = t !== tab;
   say('');
   try {
-    await ({ stats: loadStats, users: loadUsers, logs: loadLogs, categories: loadCategories })[tab]();
+    await ({ stats: loadStats, users: loadUsers, logs: loadLogs, categories: loadCategories, centers: loadCenters })[tab]();
   } catch (e) {
     if (e.message !== 'unauthorized') say('Yüklenemedi: ' + e.message, true);
   }
@@ -309,12 +311,97 @@ async function removeCategory(c) {
   }
 }
 
+// ---- service centers ----
+
+const CENTER_FIELDS = ['brand', 'name', 'city', 'district', 'address', 'phone', 'website'];
+
+async function loadCenters() {
+  centers = (await api('GET', '/admin/service-centers')).items || [];
+  renderCenters();
+}
+
+function renderCenters() {
+  const q = $('center-filter').value.trim().toLocaleLowerCase('tr');
+  const rows = $('centers');
+  rows.replaceChildren();
+  let shown = 0;
+  for (const c of centers) {
+    if (q && !(c.brand + ' ' + c.city + ' ' + c.name).toLocaleLowerCase('tr').includes(q)) continue;
+    shown++;
+    const tr = document.createElement('tr');
+    const actions = document.createElement('td');
+    actions.append(button('Düzenle', () => editCenter(c)), document.createTextNode(' '),
+      button('Sil', () => removeCenter(c), 'danger'));
+    const where = c.lat != null && c.lng != null ? c.lat.toFixed(4) + ', ' + c.lng.toFixed(4) : '-';
+    tr.append(cell(c.brand), cell(c.name), cell(c.district ? c.city + ' / ' + c.district : c.city), cell(c.phone), cell(where), actions);
+    rows.append(tr);
+  }
+  if (!shown) {
+    const tr = document.createElement('tr');
+    const td = cell('Kayıt yok.');
+    td.colSpan = 6;
+    tr.append(td);
+    rows.append(tr);
+  }
+}
+
+function resetCenterForm() {
+  $('center-form').reset();
+  $('center-id').value = '';
+  $('center-submit').textContent = 'Ekle';
+  $('center-cancel').hidden = true;
+}
+
+function editCenter(c) {
+  $('center-id').value = c.id;
+  for (const f of CENTER_FIELDS) $('center-' + f).value = c[f] || '';
+  $('center-lat').value = c.lat == null ? '' : c.lat;
+  $('center-lng').value = c.lng == null ? '' : c.lng;
+  $('center-submit').textContent = 'Kaydet';
+  $('center-cancel').hidden = false;
+  $('center-brand').focus();
+}
+
+async function saveCenter(ev) {
+  ev.preventDefault();
+  const body = {};
+  for (const f of CENTER_FIELDS) body[f] = $('center-' + f).value.trim();
+  const lat = $('center-lat').value.trim();
+  const lng = $('center-lng').value.trim();
+  body.lat = lat === '' ? null : Number(lat);
+  body.lng = lng === '' ? null : Number(lng);
+  const id = $('center-id').value;
+  try {
+    if (id) await api('PUT', '/admin/service-centers/' + encodeURIComponent(id), body);
+    else await api('POST', '/admin/service-centers', body);
+    say(id ? 'Servis merkezi güncellendi.' : 'Servis merkezi eklendi.');
+    resetCenterForm();
+    await loadCenters();
+  } catch (e) {
+    if (e.message !== 'unauthorized') say('Kaydedilemedi: ' + e.message, true);
+  }
+}
+
+async function removeCenter(c) {
+  if (!confirm('"' + c.name + '" silinsin mi?')) return;
+  try {
+    await api('DELETE', '/admin/service-centers/' + encodeURIComponent(c.id));
+    say('Servis merkezi silindi.');
+    await loadCenters();
+  } catch (e) {
+    if (e.message !== 'unauthorized') say('Silinemedi: ' + e.message, true);
+  }
+}
+
 // ---- wiring ----
 
 $('login-form').addEventListener('submit', login);
 $('logout').addEventListener('click', () => logout('Çıkış yapıldı.', true));
 $('category-form').addEventListener('submit', saveCategory);
 $('user-filter').addEventListener('input', renderUsers);
+$('center-form').addEventListener('submit', saveCenter);
+$('center-cancel').addEventListener('click', resetCenterForm);
+$('center-filter').addEventListener('input', renderCenters);
 $('failures-only').addEventListener('change', () => show('logs'));
 $('log-kind').addEventListener('change', () => show('logs'));
 for (const b of document.querySelectorAll('nav button')) b.addEventListener('click', () => show(b.dataset.tab));

@@ -274,6 +274,34 @@ Tüm üyelerin ürünleri, garanti bitişi en yakın olan önce: `{"items":[{...
 
 ---
 
+## Yetkili servis bulma
+
+Servis merkezlerini yöneticiler `/admin/` panelinden (veya admin API'siyle) ekler. Marka ve şehir eşleşmesi büyük/küçük
+harf ve Türkçe karakterden bağımsızdır (`İstanbul` = `ISTANBUL` = `istanbul`). Kayıtlı merkez yoksa
+`maps_search_url` ile Google Haritalar'da "<marka> yetkili servis <şehir>" araması açılır (API anahtarı gerekmez).
+
+### `GET /products/{id}/service-centers?city=&lat=&lng=` (auth)
+```json
+{"brand":"ASUS","maps_search_url":"https://www.google.com/maps/search/?api=1&query=ASUS+yetkili+servis+%C4%B0stanbul",
+ "items":[{"id":"...","brand":"ASUS","name":"ASUS Kadıköy","city":"İstanbul","district":"Kadıköy","address":"...",
+   "phone":"+90 216 ...","website":"https://...","lat":40.99,"lng":29.03,"distance_km":2.4}]}
+```
+`lat`/`lng` verilirse en yakın önce sıralanır (`distance_km`), koordinatı olmayanlar sona kalır. Ürünün markası
+yoksa liste boş döner ve harita araması ürün adıyla yapılır. `422`: geçersiz koordinat.
+
+### `GET /service-centers?brand=&city=&lat=&lng=` (auth)
+Aynı yanıt (`brand` alanı olmadan). Ne marka ne şehir verilirse liste boştur.
+
+### Admin: `GET /admin/service-centers?brand=&city=` · `POST /admin/service-centers` · `PUT /admin/service-centers/{id}` · `DELETE /admin/service-centers/{id}`
+```json
+{"brand":"ASUS","name":"ASUS Kadıköy","city":"İstanbul","district":"Kadıköy","address":"...",
+ "phone":"+90 216 000 00 00","website":"https://...","lat":40.99,"lng":29.03}
+```
+Zorunlu: `brand` (≤60), `name` (≤120), `city` (≤60). `phone` yalnızca rakam, boşluk, `+ ( ) -`; `website` http(s);
+`lat`/`lng` ikisi birlikte verilir.
+
+---
+
 ## Belgeler
 
 ### `POST /products/{id}/documents` (auth, multipart)

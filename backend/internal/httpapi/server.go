@@ -103,6 +103,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/v1/products/{id}", a(http.HandlerFunc(s.handleGetProduct)))
 	mux.Handle("PUT /api/v1/products/{id}", a(http.HandlerFunc(s.handleUpdateProduct)))
 	mux.Handle("DELETE /api/v1/products/{id}", a(http.HandlerFunc(s.handleDeleteProduct)))
+	mux.Handle("GET /api/v1/products/{id}/service-centers", a(http.HandlerFunc(s.handleProductServiceCenters)))
+	mux.Handle("GET /api/v1/service-centers", a(http.HandlerFunc(s.handleServiceCenters)))
 	mux.Handle("GET /api/v1/products/{id}/checklist", a(http.HandlerFunc(s.handleChecklist)))
 	mux.Handle("GET /api/v1/products/{id}/service-pack.pdf", a(http.HandlerFunc(s.handleServicePack)))
 
@@ -140,6 +142,10 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/v1/admin/extraction-logs", admin(s.handleAdminExtractionLogs))
 	mux.Handle("POST /api/v1/admin/categories", admin(s.handleAdminUpsertCategory))
 	mux.Handle("DELETE /api/v1/admin/categories/{slug}", admin(s.handleAdminDeleteCategory))
+	mux.Handle("GET /api/v1/admin/service-centers", admin(s.handleAdminServiceCenters))
+	mux.Handle("POST /api/v1/admin/service-centers", admin(s.handleAdminCreateServiceCenter))
+	mux.Handle("PUT /api/v1/admin/service-centers/{id}", admin(s.handleAdminUpdateServiceCenter))
+	mux.Handle("DELETE /api/v1/admin/service-centers/{id}", admin(s.handleAdminDeleteServiceCenter))
 
 	// Web admin panel (static; every action goes through the admin API above).
 	mux.Handle("GET /admin/", adminui.Handler())
