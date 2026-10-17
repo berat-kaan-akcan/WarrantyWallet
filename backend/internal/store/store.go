@@ -26,6 +26,7 @@ type Store interface {
 	GetUserByID(ctx context.Context, id string) (domain.User, error)
 	ListUsers(ctx context.Context) ([]domain.User, error)
 	SetUserRole(ctx context.Context, id string, role domain.Role) error
+	MarkEmailVerified(ctx context.Context, id string, at time.Time) error
 	DeleteUser(ctx context.Context, id string) error
 	UpdateUserProfile(ctx context.Context, id, name string) error
 	SetUserPassword(ctx context.Context, id, passwordHash string) error

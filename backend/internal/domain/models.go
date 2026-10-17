@@ -30,12 +30,14 @@ const (
 
 // User is an account.
 type User struct {
-	ID           string    `json:"id"`
-	Email        string    `json:"email"`
-	Name         string    `json:"name"`
-	Role         Role      `json:"role"`
-	PasswordHash string    `json:"-"`
-	CreatedAt    time.Time `json:"created_at"`
+	ID           string `json:"id"`
+	Email        string `json:"email"`
+	Name         string `json:"name"`
+	Role         Role   `json:"role"`
+	PasswordHash string `json:"-"`
+	// EmailVerifiedAt is set once the user opened the verification link (nil = not verified).
+	EmailVerifiedAt *time.Time `json:"email_verified_at"`
+	CreatedAt       time.Time  `json:"created_at"`
 }
 
 // Product is a purchased item with its warranty.
@@ -310,6 +312,7 @@ type AuthTokenKind string
 const (
 	TokenRefresh       AuthTokenKind = "refresh"
 	TokenPasswordReset AuthTokenKind = "password_reset"
+	TokenEmailVerify   AuthTokenKind = "email_verify"
 )
 
 // AuthToken is an opaque token (refresh or password reset). Only its SHA-256 hash is stored;

@@ -1,6 +1,6 @@
 # İlerleme (PROGRESS)
 
-Son güncelleme: 2026-10-16
+Son güncelleme: 2026-10-17
 
 ## Durum özeti
 - **Backend (Go):** V1 uç noktalarının tamamı yazıldı; `go vet` temiz, `go test ./...` yeşil (birim + handler/entegrasyon testleri).
@@ -53,6 +53,7 @@ Son güncelleme: 2026-10-16
 13. **V2(d) Analitik / dashboard iyileştirmeleri** — backend: `/dashboard` yanıtına `analytics` eklendi: garanti altındaki toplam değer, garantisi süren ürün oranı, önümüzdeki 12 ayda biten garantiler, son 12 ayın alımları (tutar en çok harcanan para biriminde), en çok ürünü olan 5 marka (büyük/küçük harf duyarsız) ve servis özeti (toplam/devam eden/çözülen, ödenen ücret, ortalama çözüm süresi). Mobil: "Özet" ekranında değer kartı ve oran çubuğu, iki aylık sütun grafiği (grafik kütüphanesi eklenmedi; her sütun ekran okuyucuya "Kasım 2026: 2 garanti bitiyor" gibi okunuyor), servis özeti ve marka listesi. Eski backend'den `analytics` gelmezse bölüm gizleniyor. Mobil testler: 57/57.
 14. **V2(e) Basit admin paneli** — Karar: Flutter içinde bir admin ekranı yerine backend'e gömülü hafif bir web paneli (`/admin/`, `internal/adminui`) yapıldı; tarayıcıdan her yerden açılabiliyor, mobil uygulamayı büyütmüyor ve ek bağımlılık yok. Bölümler: özet (kullanıcı/ürün sayısı, fiş okuma başarı oranı, sağlayıcı dağılımı), kullanıcılar (arama, yönetici yapma/kaldırma, onaylı silme), fiş okuma kayıtları (hatalar filtresi) ve kategoriler (ekle/güncelle/sil). Güvenlik: yalnızca mevcut admin API'si kullanılıyor, sıkı CSP var (satır içi betik yok), veriler `textContent` ile yazılıyor (testle denetleniyor), token `sessionStorage`'da tutuluyor. Go testleri paneli, CSP'yi ve yönlendirmeyi kontrol ediyor. Chromium ile uçtan uca denendi: admin olmayan giriş reddedildi; özet, kullanıcılar, rol değiştirme, kategori ekleme ve kayıtlar sorunsuz çalıştı; HTML içeren kullanıcı adı düz metin olarak gösterildi; 375 px genişlikte yatay taşma ve konsol hatası yok.
 15. **Kalanlar turu (2026-10-17)** — Servis paketi PDF'i artık servis durumunu, servis tarihini, onarım ücretini, kapanış tarihini ve servis sürecini (zaman çizelgesi) içeriyor; uzun süreçler yeni sayfaya taşıyor. Admin: migration `0005` ile yapay zekâ kayıtlarına `kind` (receipt/diagnosis) ve `model` eklendi; arıza asistanı her kullanımda kayıt düşüyor (kullanıcının açıklaması saklanmıyor). `/admin/stats` arıza asistanı istatistiklerini (toplam, Gemini, kural tabanı, AI hatası, modele göre) veriyor; kayıtlar `?kind=` ile süzülüyor. Panel bu istatistikleri ve model tablosunu gösteriyor, süresi dolan oturumu refresh token ile uzatıyor, çıkışta refresh token'ı sunucuda iptal ediyor, yanlış şifrede Türkçe mesaj veriyor (önceden "oturum süresi doldu" görünüyordu). PostgreSQL üzerinde Chromium ile denendi.
+16. **E-posta doğrulama ve SMTP (2026-10-17)** — Migration `0006`: `users.email_verified_at` ve `email_verify` token türü. Kayıttan sonra 24 saat geçerli, tek kullanımlık doğrulama bağlantısı gönderiliyor (token yalnızca SHA-256 özetiyle saklanıyor, yeni bağlantı eskileri geçersiz kılıyor). Uç noktalar: `POST /auth/email/resend`, `POST /auth/email/verify` (JSON) ve e-postadaki bağlantı için `GET /auth/email/verify` (sıkı CSP'li Türkçe sonuç sayfası). Gerçek gönderici `mail.SMTPSender`: STARTTLS (465'te doğrudan TLS), başlıklarda CR/LF reddi, UTF-8 base64 gövde; `SMTP_HOST` yoksa eskisi gibi maskeli log. Testler sahte bir SMTP sunucusuyla yapılıyor. Mobil: doğrulanmamış hesapta ana ekranda "Tekrar gönder" / "Doğruladım" uyarısı.
 
 ## Son durum (2026-10-17)
 Bu oturumdaki tüm commit'lerin CI koşuları yeşil (backend, PostgreSQL entegrasyonu, Docker imajı, mobil format/analiz/test, Android debug APK). Yerelde: backend 73 test fonksiyonu geçti (PostgreSQL sözleşme testleri `-tags pgx` ile ayrıca geçti), mobil 57/57.
@@ -66,7 +67,7 @@ Bu oturumdaki tüm commit'lerin CI koşuları yeşil (backend, PostgreSQL entegr
 - [x] V2: basit admin paneli (web, `/admin/`)
 - [x] Refresh token, şifre sıfırlama iskeleti
 - [ ] V2: servis merkezi bulma, aile hesabı, bulut yedekleme
-- [ ] E-posta doğrulama ve gerçek SMTP gönderici (şimdilik `LogSender` yalnızca maskeli log yazar)
+- [x] E-posta doğrulama ve gerçek SMTP gönderici (`SMTP_HOST` yoksa maskeli log)
 - [ ] S3/MinIO depolama uygulaması, FCM push
 - [x] Servis paketi PDF'ine servis ücreti ve zaman çizelgesini eklemek
 - [x] Admin paneline AI arıza asistanı kullanım istatistikleri; panelde refresh token ile oturum uzatma

@@ -27,6 +27,12 @@ type Config struct {
 	CORSOrigins     string
 	AdminEmails     []string
 	NotifyEvery     time.Duration
+	PublicBaseURL   string // used in e-mail links
+	SMTPHost        string // empty → mails are only logged
+	SMTPPort        int
+	SMTPUsername    string
+	SMTPPassword    string
+	SMTPFrom        string
 }
 
 // Load reads configuration from the environment (getenv is injectable for tests).
@@ -49,6 +55,15 @@ func Load(getenv func(string) string) (Config, error) {
 		GeminiTimeout: dur(getenv("GEMINI_TIMEOUT"), 25*time.Second),
 		CORSOrigins:   def(getenv("CORS_ORIGINS"), "*"),
 		NotifyEvery:   dur(getenv("NOTIFY_INTERVAL"), 15*time.Minute),
+		PublicBaseURL: strings.TrimRight(def(getenv("PUBLIC_BASE_URL"), "http://localhost:8080"), "/"),
+		SMTPHost:      strings.TrimSpace(getenv("SMTP_HOST")),
+		SMTPPort:      num(getenv("SMTP_PORT"), 587),
+		SMTPUsername:  strings.TrimSpace(getenv("SMTP_USERNAME")),
+		SMTPPassword:  getenv("SMTP_PASSWORD"),
+		SMTPFrom:      strings.TrimSpace(getenv("SMTP_FROM")),
+	}
+	if c.SMTPHost != "" && c.SMTPFrom == "" {
+		return c, errors.New("SMTP_FROM is required when SMTP_HOST is set")
 	}
 	for _, m := range strings.Split(def(getenv("GEMINI_FALLBACK_MODELS"), "gemini-2.5-flash"), ",") {
 		if m = strings.TrimSpace(m); m != "" && m != c.GeminiModel {

@@ -87,6 +87,15 @@ func run(logger *slog.Logger) error {
 		logger.Info("gemini extraction enabled", "model", cfg.GeminiModel, "fallbacks", cfg.GeminiFallbacks)
 	}
 
+	var mailer mail.Sender = mail.LogSender{Logger: logger}
+	if cfg.SMTPHost != "" {
+		mailer = mail.SMTPSender{Host: cfg.SMTPHost, Port: cfg.SMTPPort, Username: cfg.SMTPUsername,
+			Password: cfg.SMTPPassword, From: cfg.SMTPFrom}
+		logger.Info("smtp mail enabled", "host", cfg.SMTPHost, "port", cfg.SMTPPort)
+	} else {
+		logger.Warn("SMTP_HOST not set: account e-mails are only logged")
+	}
+
 	var assistant assist.Assistant
 	if cfg.GeminiAPIKey != "" {
 		assistant.Gemini = gem
@@ -94,16 +103,17 @@ func run(logger *slog.Logger) error {
 
 	srv := &httpapi.Server{
 		Store: st, Files: files, Extractor: extractor, Assistant: assistant,
-		Tokens:      auth.Tokens{Secret: []byte(cfg.JWTSecret), TTL: cfg.TokenTTL},
-		RefreshTTL:  cfg.RefreshTTL,
-		Mailer:      mail.LogSender{Logger: logger},
-		TrustProxy:  cfg.TrustProxy,
-		Hasher:      auth.Hasher{},
-		Logger:      logger,
-		MaxUpload:   cfg.MaxUploadMB << 20,
-		AdminEmails: cfg.AdminEmails,
-		CORSOrigins: cfg.CORSOrigins,
-		Version:     version,
+		Tokens:        auth.Tokens{Secret: []byte(cfg.JWTSecret), TTL: cfg.TokenTTL},
+		RefreshTTL:    cfg.RefreshTTL,
+		Mailer:        mailer,
+		PublicBaseURL: cfg.PublicBaseURL,
+		TrustProxy:    cfg.TrustProxy,
+		Hasher:        auth.Hasher{},
+		Logger:        logger,
+		MaxUpload:     cfg.MaxUploadMB << 20,
+		AdminEmails:   cfg.AdminEmails,
+		CORSOrigins:   cfg.CORSOrigins,
+		Version:       version,
 	}
 
 	worker := &notify.Worker{Store: st, Interval: cfg.NotifyEvery, Logger: logger}

@@ -129,13 +129,18 @@ func affected(res sql.Result, err error) error {
 
 // ---- users ----
 
-const userCols = `id, email, name, role, password_hash, created_at`
+const userCols = `id, email, name, role, password_hash, email_verified_at, created_at`
 
 func scanUser(row interface{ Scan(...any) error }) (domain.User, error) {
 	var u domain.User
 	var role string
-	err := row.Scan(&u.ID, &u.Email, &u.Name, &role, &u.PasswordHash, &u.CreatedAt)
+	var verified sql.NullTime
+	err := row.Scan(&u.ID, &u.Email, &u.Name, &role, &u.PasswordHash, &verified, &u.CreatedAt)
 	u.Role = domain.Role(role)
+	if verified.Valid {
+		t := verified.Time
+		u.EmailVerifiedAt = &t
+	}
 	return u, err
 }
 
@@ -196,6 +201,14 @@ func (s *Store) SetUserRole(ctx context.Context, id string, role domain.Role) er
 		return domain.ErrNotFound
 	}
 	return affected(s.db.ExecContext(ctx, `UPDATE users SET role=$2 WHERE id=$1`, id, string(role)))
+}
+
+// MarkEmailVerified records the first successful verification.
+func (s *Store) MarkEmailVerified(ctx context.Context, id string, at time.Time) error {
+	if !validUUID(id) {
+		return domain.ErrNotFound
+	}
+	return affected(s.db.ExecContext(ctx, `UPDATE users SET email_verified_at=COALESCE(email_verified_at, $2) WHERE id=$1`, id, at))
 }
 
 // DeleteUser deletes a user (cascades).

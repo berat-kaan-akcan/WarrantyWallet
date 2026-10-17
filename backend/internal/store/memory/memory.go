@@ -118,6 +118,22 @@ func (s *Store) SetUserRole(_ context.Context, id string, role domain.Role) erro
 	return nil
 }
 
+// MarkEmailVerified records the first successful verification.
+func (s *Store) MarkEmailVerified(_ context.Context, id string, at time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	u, ok := s.users[id]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	if u.EmailVerifiedAt == nil {
+		t := at.UTC()
+		u.EmailVerifiedAt = &t
+		s.users[id] = u
+	}
+	return nil
+}
+
 // DeleteUser removes a user and all owned data.
 func (s *Store) DeleteUser(_ context.Context, id string) error {
 	s.mu.Lock()

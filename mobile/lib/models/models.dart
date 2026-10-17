@@ -18,18 +18,23 @@ class AppUser {
       {required this.id,
       required this.email,
       required this.name,
-      required this.role});
+      required this.role,
+      this.emailVerified = true});
 
   factory AppUser.fromJson(Map<String, dynamic> j) => AppUser(
       id: _s(j['id']),
       email: _s(j['email']),
       name: _s(j['name']),
-      role: _s(j['role']));
+      role: _s(j['role']),
+      // Older backends do not send the field: treat as verified (no banner).
+      emailVerified: !j.containsKey('email_verified_at') ||
+          j['email_verified_at'] != null);
 
   final String id;
   final String email;
   final String name;
   final String role;
+  final bool emailVerified;
 
   bool get isAdmin => role == 'admin';
 

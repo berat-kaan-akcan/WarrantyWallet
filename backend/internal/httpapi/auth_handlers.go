@@ -77,6 +77,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		s.storeError(w, err)
 		return
 	}
+	s.sendVerification(r.Context(), *u)
 	s.respondWithToken(w, r, http.StatusCreated, *u)
 }
 

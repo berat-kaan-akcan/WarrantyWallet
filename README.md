@@ -82,6 +82,10 @@ go run -tags pgx ./cmd/api          # migration'lar açılışta otomatik uygula
 
 Web yönetim paneli: <http://localhost:8080/admin/> (yalnızca `ADMIN_EMAILS` ile yönetici yapılan hesaplar girebilir).
 
+E-posta: `SMTP_HOST`, `SMTP_FROM` (gerekirse `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`) verilirse doğrulama ve
+şifre sıfırlama e-postaları gerçekten gönderilir; verilmezse yalnızca maskeli adresle log'a yazılır. Bağlantılar
+`PUBLIC_BASE_URL` (varsayılan `http://localhost:8080`) üzerinden kurulur.
+
 ### 3) Mobil uygulamayı çalıştırma
 ```bash
 cd mobile

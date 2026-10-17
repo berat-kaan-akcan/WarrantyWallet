@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/api_client.dart';
 import '../../models/models.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
@@ -49,6 +50,10 @@ class HomeScreen extends ConsumerWidget {
               key: const Key('greeting'),
               style: theme.textTheme.headlineSmall,
             ),
+            if (user != null && !user.emailVerified) ...[
+              const SizedBox(height: 12),
+              VerifyEmailBanner(email: user.email),
+            ],
             const SizedBox(height: 16),
             dashboard.when(
               data: (d) => _SummaryCard(d: d),
@@ -171,6 +176,95 @@ class _ExpiringTile extends StatelessWidget {
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
               builder: (_) => ProductDetailScreen(productId: p.id)),
+        ),
+      ),
+    );
+  }
+}
+
+/// Asks the user to confirm their e-mail address (needed for password reset mails).
+class VerifyEmailBanner extends ConsumerStatefulWidget {
+  const VerifyEmailBanner({super.key, required this.email});
+
+  final String email;
+
+  @override
+  ConsumerState<VerifyEmailBanner> createState() => _VerifyEmailBannerState();
+}
+
+class _VerifyEmailBannerState extends ConsumerState<VerifyEmailBanner> {
+  bool _busy = false;
+
+  Future<void> _run(Future<void> Function() action) async {
+    setState(() => _busy = true);
+    try {
+      await action();
+    } on ApiException catch (e) {
+      if (mounted) showSnack(context, e.userMessage, error: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _resend() => _run(() async {
+        final sent = await ref.read(repositoryProvider).resendVerification();
+        if (!mounted) return;
+        showSnack(
+            context,
+            sent
+                ? 'Doğrulama bağlantısı ${widget.email} adresine gönderildi'
+                : 'E-posta adresiniz zaten doğrulanmış');
+        if (!sent) await _check(silent: true);
+      });
+
+  Future<void> _check({bool silent = false}) => _run(() async {
+        final me = await ref.read(repositoryProvider).me();
+        ref.read(authControllerProvider.notifier).userUpdated(me);
+        if (!mounted || silent) return;
+        showSnack(
+            context,
+            me.emailVerified
+                ? 'Teşekkürler, e-posta adresiniz doğrulandı'
+                : 'Henüz doğrulanmamış görünüyor. E-postadaki bağlantıyı açın.');
+      });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      key: const Key('verify_banner'),
+      color: theme.colorScheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.mark_email_unread_outlined),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                      'E-posta adresinizi doğrulayın. ${widget.email} adresine gönderdiğimiz bağlantıyı açın; şifre sıfırlama e-postaları bu adrese gelir.'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                TextButton(
+                    key: const Key('verify_resend'),
+                    onPressed: _busy ? null : _resend,
+                    child: const Text('Tekrar gönder')),
+                TextButton(
+                    key: const Key('verify_check'),
+                    onPressed: _busy ? null : () => _check(),
+                    child: const Text('Doğruladım')),
+              ],
+            ),
+          ],
         ),
       ),
     );

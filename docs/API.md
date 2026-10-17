@@ -64,9 +64,10 @@ Veritabanına ulaşılamıyorsa `503` ve `"status":"degraded"`. `extractor`: `ge
   "expires_at": "2026-10-16T21:02:18Z",
   "refresh_token": "kq3V1m...43 karakter",
   "refresh_expires_at": "2026-11-15T20:02:18Z",
-  "user": {"id":"d72a0af5-...","email":"berat@example.com","name":"Berat","role":"user","created_at":"2026-10-16T20:02:18Z"}
+  "user": {"id":"d72a0af5-...","email":"berat@example.com","name":"Berat","role":"user","email_verified_at":null,"created_at":"2026-10-16T20:02:18Z"}
 }
 ```
+Kayıttan sonra e-posta adresine 24 saat geçerli bir doğrulama bağlantısı gönderilir (aşağıya bakın).
 Doğrulama: e-posta geçerli ve ≤254 karakter, şifre 8–128 karakter, ad ≤100 karakter. `ADMIN_EMAILS` içindeki e-postalar `admin` rolü alır.
 Hatalar: `409 email_taken`, `422 validation_failed` (`fields.email`, `fields.password`).
 
@@ -98,8 +99,8 @@ Sunucu yalnızca token'ın SHA-256 özetini saklar.
 ```json
 {"status":"accepted","message":"if an account exists, a reset link has been sent"}
 ```
-Hesap varsa 1 saat geçerli, tek kullanımlık bir kod üretilir; önceki kodlar geçersiz olur. V1'de e-posta gönderici
-yalnızca maskeli log yazar (`b***@example.com`); SMTP `mail.Sender` arayüzüne eklenecek.
+Hesap varsa 1 saat geçerli, tek kullanımlık bir kod üretilir; önceki kodlar geçersiz olur. `SMTP_HOST` tanımlıysa kod
+e-postayla gönderilir; tanımlı değilse gönderici yalnızca maskeli log yazar (`b***@example.com`).
 
 ### `POST /auth/password/reset`
 ```json
@@ -108,10 +109,26 @@ yalnızca maskeli log yazar (`b***@example.com`); SMTP `mail.Sender` arayüzüne
 `204`. Başarılı sıfırlama tüm refresh token'ları iptal eder (diğer cihazlarda oturum kapanır).
 Hatalar: `400 invalid_reset_token`, `422` (`fields.password`).
 
+### `POST /auth/email/resend` (auth)
+Yeni bir doğrulama bağlantısı gönderir; önceki bağlantılar geçersiz olur.
+`202 {"status":"sent"}` veya adres zaten doğrulanmışsa `200 {"status":"already_verified"}`.
+
+### `POST /auth/email/verify`
+```json
+{"token":"<bağlantıdaki token>"}
+```
+`200` — güncel kullanıcı (`email_verified_at` dolu). Token tek kullanımlıktır, 24 saat geçerlidir.
+Hata: `400 invalid_verification_token`.
+
+### `GET /auth/email/verify?token=...`
+E-postadaki bağlantı buraya gelir (`PUBLIC_BASE_URL` + bu yol). Tarayıcıda Türkçe bir sonuç sayfası gösterir
+(`200` başarılı, `400` geçersiz veya süresi dolmuş bağlantı).
+
 ### `GET /me` (auth)
 ```json
-{"id":"d72a0af5-...","email":"berat@example.com","name":"Berat","role":"user","created_at":"2026-10-16T20:02:18Z"}
+{"id":"d72a0af5-...","email":"berat@example.com","name":"Berat","role":"user","email_verified_at":"2026-10-17T11:20:00Z","created_at":"2026-10-16T20:02:18Z"}
 ```
+`email_verified_at` doğrulanmamış hesaplarda `null`; mobil uygulama bu durumda ana ekranda doğrulama uyarısı gösterir.
 
 ### `PATCH /me` (auth)
 ```json

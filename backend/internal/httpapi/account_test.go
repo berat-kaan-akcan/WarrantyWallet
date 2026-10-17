@@ -10,7 +10,24 @@ import (
 
 type captureMailer struct {
 	mu     sync.Mutex
-	tokens map[string]string // email → last token
+	tokens map[string]string // email → last reset token
+	links  map[string]string // email → last verification link
+}
+
+func (c *captureMailer) SendEmailVerification(_ context.Context, to, _ string, link string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.links == nil {
+		c.links = map[string]string{}
+	}
+	c.links[to] = link
+	return nil
+}
+
+func (c *captureMailer) link(to string) string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.links[to]
 }
 
 func (c *captureMailer) SendPasswordReset(_ context.Context, to, _ string, token string) error {

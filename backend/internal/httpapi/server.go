@@ -21,21 +21,23 @@ import (
 
 // Server wires dependencies for the HTTP handlers.
 type Server struct {
-	Store       store.Store
-	Files       storage.Storage
-	Extractor   extract.ReceiptExtractor
-	Assistant   assist.Assistant // AI fault assistant; zero value = rules only
-	Tokens      auth.Tokens
-	RefreshTTL  time.Duration // refresh token lifetime (default 30 days)
-	Mailer      mail.Sender
-	TrustProxy  bool // honour X-Forwarded-For (only behind a trusted reverse proxy)
-	Hasher      auth.Hasher
-	Logger      *slog.Logger
-	MaxUpload   int64 // bytes
-	AdminEmails []string
-	CORSOrigins string
-	Now         func() time.Time
-	Version     string
+	Store      store.Store
+	Files      storage.Storage
+	Extractor  extract.ReceiptExtractor
+	Assistant  assist.Assistant // AI fault assistant; zero value = rules only
+	Tokens     auth.Tokens
+	RefreshTTL time.Duration // refresh token lifetime (default 30 days)
+	Mailer     mail.Sender
+	// PublicBaseURL is the externally reachable API origin used in e-mail links.
+	PublicBaseURL string
+	TrustProxy    bool // honour X-Forwarded-For (only behind a trusted reverse proxy)
+	Hasher        auth.Hasher
+	Logger        *slog.Logger
+	MaxUpload     int64 // bytes
+	AdminEmails   []string
+	CORSOrigins   string
+	Now           func() time.Time
+	Version       string
 
 	authLimiter    *rateLimiter
 	extractLimiter *rateLimiter
@@ -82,6 +84,9 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/v1/auth/logout", a(http.HandlerFunc(s.handleLogout)))
 	mux.Handle("POST /api/v1/auth/password/forgot", s.authLimiter.wrap(http.HandlerFunc(s.handleForgotPassword)))
 	mux.Handle("POST /api/v1/auth/password/reset", s.authLimiter.wrap(http.HandlerFunc(s.handleResetPassword)))
+	mux.Handle("POST /api/v1/auth/email/resend", a(s.authLimiter.wrap(http.HandlerFunc(s.handleResendVerification))))
+	mux.Handle("POST /api/v1/auth/email/verify", s.authLimiter.wrap(http.HandlerFunc(s.handleVerifyEmailJSON)))
+	mux.Handle("GET /api/v1/auth/email/verify", s.authLimiter.wrap(http.HandlerFunc(s.handleVerifyEmailLink)))
 	mux.Handle("GET /api/v1/me", a(http.HandlerFunc(s.handleMe)))
 	mux.Handle("PATCH /api/v1/me", a(http.HandlerFunc(s.handleUpdateMe)))
 	mux.Handle("PUT /api/v1/me/password", a(http.HandlerFunc(s.handleChangePassword)))

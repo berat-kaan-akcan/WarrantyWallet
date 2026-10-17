@@ -74,8 +74,18 @@ class FakeRepository implements WarrantyRepository {
           String email, String password, String name) async =>
       const AuthSession('tok', testUser);
 
+  AppUser user = testUser;
+  bool resendResult = true;
+  int resendCalls = 0;
+
   @override
-  Future<AppUser> me() async => testUser;
+  Future<AppUser> me() async => user;
+
+  @override
+  Future<bool> resendVerification() async {
+    resendCalls++;
+    return resendResult;
+  }
 
   @override
   Future<AppUser> updateProfile({required String name}) async => AppUser(

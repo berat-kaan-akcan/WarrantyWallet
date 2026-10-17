@@ -47,3 +47,19 @@ func TestGeminiFallbackModels(t *testing.T) {
 		t.Fatalf("fallbacks %v", c.GeminiFallbacks)
 	}
 }
+
+func TestSMTPConfig(t *testing.T) {
+	env := map[string]string{"SMTP_HOST": "smtp.example.com", "PUBLIC_BASE_URL": "https://api.example.com/"}
+	if _, err := Load(func(k string) string { return env[k] }); err == nil {
+		t.Fatal("SMTP_HOST without SMTP_FROM must fail")
+	}
+	env["SMTP_FROM"] = "Warranty Wallet <noreply@example.com>"
+	c, err := Load(func(k string) string { return env[k] })
+	if err != nil || c.SMTPPort != 587 || c.PublicBaseURL != "https://api.example.com" {
+		t.Fatalf("%+v %v", c, err)
+	}
+	c, _ = Load(func(string) string { return "" })
+	if c.SMTPHost != "" || c.PublicBaseURL != "http://localhost:8080" {
+		t.Fatalf("defaults %+v", c)
+	}
+}

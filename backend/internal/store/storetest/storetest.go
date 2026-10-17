@@ -57,8 +57,26 @@ func Run(t *testing.T, newStore func(t *testing.T) store.Store) {
 			t.Fatal(err)
 		}
 		u, _ := s.GetUserByID(ctx, a)
-		if u.Name != "Yeni Ad" || u.PasswordHash != "newhash" {
+		if u.Name != "Yeni Ad" || u.PasswordHash != "newhash" || u.EmailVerifiedAt != nil {
 			t.Fatalf("user %+v", u)
+		}
+		first := time.Date(2026, 10, 17, 9, 0, 0, 0, time.UTC)
+		if err := s.MarkEmailVerified(ctx, a, first); err != nil {
+			t.Fatal(err)
+		}
+		_ = s.MarkEmailVerified(ctx, a, first.Add(time.Hour)) // keeps the first timestamp
+		if u, _ := s.GetUserByID(ctx, a); u.EmailVerifiedAt == nil || !u.EmailVerifiedAt.Equal(first) {
+			t.Fatalf("verified %+v", u.EmailVerifiedAt)
+		}
+		if err := s.MarkEmailVerified(ctx, domain.NewID(), first); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatalf("unknown user %v", err)
+		}
+		vt := &domain.AuthToken{UserID: a, Kind: domain.TokenEmailVerify, TokenHash: "verify-hash", ExpiresAt: first.Add(24 * time.Hour)}
+		if err := s.CreateAuthToken(ctx, vt); err != nil {
+			t.Fatal(err)
+		}
+		if got, err := s.ConsumeAuthToken(ctx, domain.TokenEmailVerify, "verify-hash", first); err != nil || got.UserID != a {
+			t.Fatalf("consume verify %v %v", got, err)
 		}
 		if err := s.SetUserPassword(ctx, domain.NewID(), "x"); !errors.Is(err, domain.ErrNotFound) {
 			t.Fatalf("want not found, got %v", err)
