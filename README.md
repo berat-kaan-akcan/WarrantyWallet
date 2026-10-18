@@ -37,8 +37,8 @@ garanti bitiş bildirimleri (90/30/7 gün), servis kaydı oluşturma, "Ürünüm
 servis belgeleri PDF paketi, dashboard.
 
 **V2** — QR/barkod ve seri numarası tarama ✅, AI arıza asistanı ✅, servis geçmişi (zaman çizelgesi,
-ücret) ✅, analitik ✅, web admin paneli (kullanıcılar, kategoriler, OCR hataları) ✅; servis merkezi bulma,
-aile hesabı, bulut yedekleme (planlandı).
+ücret) ✅, analitik ✅, web admin paneli (kullanıcılar, kategoriler, OCR hataları) ✅, servis merkezi bulma ✅,
+aile hesabı ✅, bulut yedekleme ✅, e-posta doğrulama ✅, S3/MinIO depolama ✅, FCM push (Firebase projesi bekleniyor).
 
 **V3** — Mağaza ve üretici entegrasyonları, e-postadan fatura içe aktarma, ikinci el satış,
 ürün değer tahmini, uzatılmış garanti teklifleri, Business (servis sağlayıcı) rolü.

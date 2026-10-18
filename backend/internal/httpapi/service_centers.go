@@ -119,6 +119,15 @@ func (s *Server) readCenter(w http.ResponseWriter, r *http.Request) (domain.Serv
 	if !decodeJSON(w, r, &c) {
 		return c, false
 	}
+	if errs := cleanCenter(&c); len(errs) > 0 {
+		writeError(w, http.StatusUnprocessableEntity, "validation_failed", "invalid service center", errs)
+		return c, false
+	}
+	return c, true
+}
+
+// cleanCenter trims the text fields and returns the per-field validation errors.
+func cleanCenter(c *domain.ServiceCenter) map[string]string {
 	for _, f := range []*string{&c.Brand, &c.Name, &c.City, &c.District, &c.Address, &c.Phone, &c.Website} {
 		*f = strings.TrimSpace(*f)
 	}
@@ -149,11 +158,7 @@ func (s *Server) readCenter(w http.ResponseWriter, r *http.Request) (domain.Serv
 	if (c.Lat == nil) != (c.Lng == nil) || (c.Lat != nil && (*c.Lat < -90 || *c.Lat > 90 || *c.Lng < -180 || *c.Lng > 180)) {
 		errs["lat"] = "lat and lng together, valid coordinates"
 	}
-	if len(errs) > 0 {
-		writeError(w, http.StatusUnprocessableEntity, "validation_failed", "invalid service center", errs)
-		return c, false
-	}
-	return c, true
+	return errs
 }
 
 func (s *Server) handleAdminServiceCenters(w http.ResponseWriter, r *http.Request) {

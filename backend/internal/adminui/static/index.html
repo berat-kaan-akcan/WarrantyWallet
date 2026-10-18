@@ -98,6 +98,11 @@
         <button type="submit" id="center-submit">Ekle</button>
         <button type="button" id="center-cancel" hidden>Vazgeç</button>
       </form>
+      <form id="center-import">
+        <p>Toplu ekleme: ilk satırı başlık olan bir CSV dosyası seçin. Sütunlar: Marka, Ad, Şehir (zorunlu); İlçe, Adres, Telefon, Web sitesi, Enlem, Boylam. Excel'in ";" ile ayrılmış dosyası da olur. Hatalı satır varsa hiçbir kayıt eklenmez; zaten kayıtlı merkezler atlanır.</p>
+        <label>CSV dosyası <input id="center-file" type="file" accept=".csv,text/csv" required></label>
+        <button type="submit">İçe aktar</button>
+      </form>
       <label>Ara <input id="center-filter" type="search" placeholder="marka veya şehir"></label>
       <table>
         <thead><tr><th scope="col">Marka</th><th scope="col">Ad</th><th scope="col">Şehir</th><th scope="col">Telefon</th><th scope="col">Konum</th><th scope="col">İşlem</th></tr></thead>

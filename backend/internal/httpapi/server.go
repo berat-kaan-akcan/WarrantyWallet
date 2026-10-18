@@ -144,6 +144,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("DELETE /api/v1/admin/categories/{slug}", admin(s.handleAdminDeleteCategory))
 	mux.Handle("GET /api/v1/admin/service-centers", admin(s.handleAdminServiceCenters))
 	mux.Handle("POST /api/v1/admin/service-centers", admin(s.handleAdminCreateServiceCenter))
+	mux.Handle("POST /api/v1/admin/service-centers/import", admin(s.handleAdminImportServiceCenters))
 	mux.Handle("PUT /api/v1/admin/service-centers/{id}", admin(s.handleAdminUpdateServiceCenter))
 	mux.Handle("DELETE /api/v1/admin/service-centers/{id}", admin(s.handleAdminDeleteServiceCenter))
 

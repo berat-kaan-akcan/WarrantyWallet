@@ -300,6 +300,15 @@ Aynı yanıt (`brand` alanı olmadan). Ne marka ne şehir verilirse liste boştu
 Zorunlu: `brand` (≤60), `name` (≤120), `city` (≤60). `phone` yalnızca rakam, boşluk, `+ ( ) -`; `website` http(s);
 `lat`/`lng` ikisi birlikte verilir.
 
+### Admin: `POST /admin/service-centers/import`
+Toplu ekleme. Gövde: `{"csv": "<dosya içeriği>"}` (en fazla 1 MB, 5000 satır). İlk satır başlıktır; sütun adları
+İngilizce ya da Türkçe olabilir, sıra serbesttir: `brand/Marka`, `name/Ad`, `city/Şehir` (zorunlu), `district/İlçe`,
+`address/Adres`, `phone/Telefon`, `website/Web sitesi`, `lat/Enlem`, `lng/Boylam`. Ayraç `,` ya da `;` (Türkçe Excel);
+`;` dosyalarında ondalık virgül (`40,99`) kabul edilir.
+Önce tüm satırlar doğrulanır; tek bir hatalı satır varsa hiçbir kayıt yazılmaz ve `422` döner
+(`fields`: `{"row 3": "invalid phone, website"}`). Aynı marka + ad + şehir zaten kayıtlıysa satır atlanır,
+böylece aynı dosya tekrar yüklenebilir. `200`: `{"created": 12, "skipped": 3}`.
+
 ---
 
 ## Belgeler

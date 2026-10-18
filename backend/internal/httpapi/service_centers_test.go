@@ -101,3 +101,46 @@ func TestServiceCenterFinder(t *testing.T) {
 		t.Fatalf("no brand %v", nb)
 	}
 }
+
+func TestServiceCenterImport(t *testing.T) {
+	h := newHarness(t)
+	adm := h.register("admin@ww.test", "Admin")
+	user := h.register("user@ww.test", "U")
+	path := "/api/v1/admin/service-centers/import"
+	good := "\ufeffMarka;Ad;Şehir;İlçe;Telefon;Enlem;Boylam\n" +
+		"ASUS;ASUS Kadıköy;İstanbul;Kadıköy;+90 216 000 00 00;40,9909;29,0303\n" +
+		"\n" +
+		"Arçelik;Arçelik Çankaya;Ankara;;;;\n"
+	if r := h.do("POST", path, user, map[string]any{"csv": good}); r.Status != 403 {
+		t.Fatalf("non-admin import %d", r.Status)
+	}
+	bad := "brand,name,city,phone,lat,lng\nASUS,A,İstanbul,call me,,\nASUS,B,İstanbul,,41,\n,C,Ankara,,,\nASUS,D,İzmir,,x,1\n"
+	r := h.do("POST", path, adm, map[string]any{"csv": bad})
+	if r.Status != 422 {
+		t.Fatalf("bad csv %d %s", r.Status, r.Body)
+	}
+	f := r.json(t)["error"].(map[string]any)["fields"].(map[string]any)
+	if len(f) != 4 || !strings.Contains(f["row 2"].(string), "phone") || !strings.Contains(f["row 3"].(string), "lat") ||
+		!strings.Contains(f["row 4"].(string), "brand") || !strings.Contains(f["row 5"].(string), "lat") {
+		t.Fatalf("row errors %v", f)
+	}
+	if r := h.do("POST", path, adm, map[string]any{"csv": "x,y\n1,2\n"}); r.Status != 422 {
+		t.Fatalf("missing columns %d", r.Status)
+	}
+	if n := len(h.do("GET", "/api/v1/admin/service-centers", adm, nil).json(t)["items"].([]any)); n != 0 {
+		t.Fatalf("invalid file must write nothing, got %d", n)
+	}
+	res := h.do("POST", path, adm, map[string]any{"csv": good}).json(t)
+	if res["created"] != 2.0 || res["skipped"] != 0.0 {
+		t.Fatalf("import %v", res)
+	}
+	// importing again (different case) skips the existing rows
+	again := strings.Replace(good, "ASUS Kadıköy;İstanbul", "asus kadıköy;ISTANBUL", 1)
+	if res := h.do("POST", path, adm, map[string]any{"csv": again}).json(t); res["created"] != 0.0 || res["skipped"] != 2.0 {
+		t.Fatalf("re-import %v", res)
+	}
+	items := h.do("GET", "/api/v1/service-centers?brand=asus&city=istanbul", user, nil).json(t)["items"].([]any)
+	if len(items) != 1 || items[0].(map[string]any)["lat"] != 40.9909 || items[0].(map[string]any)["district"] != "Kadıköy" {
+		t.Fatalf("imported center %v", items)
+	}
+}

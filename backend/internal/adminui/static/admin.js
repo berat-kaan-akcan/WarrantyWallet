@@ -68,7 +68,9 @@ async function api(method, path, body, retried = false) {
   if (!res.ok) {
     const code = data && data.error ? data.error.code : '';
     const msg = MESSAGES[code] || (data && data.error ? data.error.message || code : 'HTTP ' + res.status);
-    throw new Error(msg);
+    const err = new Error(msg);
+    err.fields = data && data.error ? data.error.fields : null;
+    throw err;
   }
   return data;
 }
@@ -393,6 +395,30 @@ async function removeCenter(c) {
   }
 }
 
+// importCenters sends a CSV file; the server validates every row before writing anything.
+async function importCenters(ev) {
+  ev.preventDefault();
+  const file = $('center-file').files[0];
+  if (!file) return;
+  if (file.size > 900 * 1024) {
+    say('Dosya çok büyük (en fazla 900 KB). Listeyi parçalara bölün.', true);
+    return;
+  }
+  try {
+    const res = await api('POST', '/admin/service-centers/import', { csv: await file.text() });
+    say(res.created + ' servis merkezi eklendi' + (res.skipped ? ', ' + res.skipped + ' kayıt zaten vardı.' : '.'));
+    $('center-import').reset();
+    await loadCenters();
+  } catch (e) {
+    if (e.message === 'unauthorized') return;
+    const tr = { brand: 'marka', name: 'ad', city: 'şehir', district: 'ilçe', address: 'adres', phone: 'telefon',
+      website: 'web sitesi', lat: 'enlem/boylam' };
+    const rows = e.fields ? Object.entries(e.fields).map(([k, v]) => k === 'csv' ? v
+      : k.replace('row', 'satır') + ': hatalı ' + v.replace('invalid ', '').split(', ').map((f) => tr[f] || f).join(', ')).join('; ') : '';
+    say('İçe aktarılamadı, hiçbir kayıt eklenmedi. ' + (rows || e.message), true);
+  }
+}
+
 // ---- wiring ----
 
 $('login-form').addEventListener('submit', login);
@@ -402,6 +428,7 @@ $('user-filter').addEventListener('input', renderUsers);
 $('center-form').addEventListener('submit', saveCenter);
 $('center-cancel').addEventListener('click', resetCenterForm);
 $('center-filter').addEventListener('input', renderCenters);
+$('center-import').addEventListener('submit', importCenters);
 $('failures-only').addEventListener('change', () => show('logs'));
 $('log-kind').addEventListener('change', () => show('logs'));
 for (const b of document.querySelectorAll('nav button')) b.addEventListener('click', () => show(b.dataset.tab));
