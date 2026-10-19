@@ -116,7 +116,7 @@ void main() {
     expect(find.text('Günaydın, Berat'), findsOneWidget);
     expect(
         tester.widget<Text>(find.byKey(const Key('active_count'))).data, '2');
-    expect(find.text('Garanti yakında bitiyor'), findsOneWidget);
+    expect(find.text('Garantisi 90 gün içinde bitenler'), findsOneWidget);
     expect(find.text('16 gün kaldı'), findsOneWidget);
     // product list loaded in the shell → device reminders synced
     expect(scheduler.synced, containsAll(['p1', 'p2']));

@@ -61,7 +61,7 @@ class ServiceHistoryScreen extends ConsumerWidget {
                       ? 'Servis kaydı yok'
                       : 'Bu durumda kayıt yok',
                   message: filter == null
-                      ? 'Bir ürün arızalandığında ürün detayından "Ürünüm arızalandı"ya dokunun.'
+                      ? 'Bir ürün arızalandığında ürün detayından "Servis Kaydı Oluştur"a dokunun.'
                       : null,
                 )
               else

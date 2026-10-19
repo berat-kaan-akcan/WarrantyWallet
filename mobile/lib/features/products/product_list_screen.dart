@@ -173,7 +173,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                 ? 'Henüz ürün yok'
                                 : 'Sonuç bulunamadı',
                             message: _query == const ProductQuery()
-                                ? '"Ürün Ekle" ile fişinin fotoğrafını çek.'
+                                ? '"Ürün Ekle" ile fişinizin fotoğrafını çekin.'
                                 : 'Filtreleri değiştirmeyi deneyin.',
                           ),
                         ],

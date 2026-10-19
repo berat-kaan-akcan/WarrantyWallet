@@ -68,7 +68,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           style: theme.textTheme.headlineMedium),
                       const SizedBox(height: 4),
                       Text(
-                        'Satın aldığın ürünleri unutma, garanti haklarını kaybetme.',
+                        'Satın aldığınız ürünlerin garantisini takip edin, haklarınızı kaybetmeyin.',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium,
                       ),
@@ -161,7 +161,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             setState(() => _registerMode = !_registerMode),
                         child: Text(_registerMode
                             ? 'Zaten hesabım var — giriş yap'
-                            : 'Hesabın yok mu? Kayıt ol'),
+                            : 'Hesabınız yok mu? Kayıt olun'),
                       ),
                     ],
                   ),

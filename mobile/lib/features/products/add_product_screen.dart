@@ -206,7 +206,7 @@ class _ChooseSource extends StatelessWidget {
         children: [
           Icon(Icons.receipt_long, size: 72, color: theme.colorScheme.primary),
           const SizedBox(height: 16),
-          Text('Fişin fotoğrafını çek, gerisini uygulama halletsin.',
+          Text('Fişin fotoğrafını çekin, gerisini uygulama halletsin.',
               textAlign: TextAlign.center, style: theme.textTheme.titleMedium),
           const SizedBox(height: 32),
           FilledButton.icon(

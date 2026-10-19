@@ -67,7 +67,7 @@ class HomeScreen extends ConsumerWidget {
             Row(
               children: [
                 Expanded(
-                    child: Text('Garanti yakında bitiyor',
+                    child: Text('Garantisi 90 gün içinde bitenler',
                         style: theme.textTheme.titleMedium)),
                 if (onShowAll != null)
                   TextButton(onPressed: onShowAll, child: const Text('Tümü')),
@@ -93,9 +93,9 @@ class HomeScreen extends ConsumerWidget {
               data: (d) => d.byCategory.isEmpty
                   ? EmptyState(
                       icon: Icons.receipt_long,
-                      title: 'Henüz ürün eklemedin',
+                      title: 'Henüz ürün eklemediniz',
                       message:
-                          'Fişin fotoğrafını çek, gerisini uygulama halletsin.',
+                          'Fişin fotoğrafını çekin, gerisini uygulama halletsin.',
                     )
                   : Wrap(
                       spacing: 8,
