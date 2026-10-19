@@ -111,4 +111,34 @@ void main() {
     expect(const ApiException(404, 'not_in_family', 'x').userMessage,
         'Bir aileye bağlı değilsiniz.');
   });
+
+  testWidgets(
+      'a tapped reminder opens its product; permission asked after sign-in',
+      (tester) async {
+    useTallScreen(tester);
+    final scheduler = FakeReminderScheduler()..launchProduct = 'p2';
+    await tester.pumpWidget(ProviderScope(
+        overrides:
+            overrides(FakeRepository(), token: 'tok', scheduler: scheduler),
+        child: const WarrantyWalletApp()));
+    await tester.pumpAndSettle();
+    expect(scheduler.permissionRequests, 1);
+    expect(
+        find.text('Sony WH-1000XM5'), findsWidgets); // launched from a reminder
+    Navigator.of(tester.element(find.text('Sony WH-1000XM5').first)).pop();
+    await tester.pumpAndSettle();
+
+    scheduler.opened.add('p1');
+    await tester.pumpAndSettle();
+    expect(find.text('ASUS TUF VG27AQ'), findsWidgets);
+  });
+
+  testWidgets('no permission prompt before sign-in', (tester) async {
+    final scheduler = FakeReminderScheduler();
+    await tester.pumpWidget(ProviderScope(
+        overrides: overrides(FakeRepository(), scheduler: scheduler),
+        child: const WarrantyWalletApp()));
+    await tester.pumpAndSettle();
+    expect(scheduler.permissionRequests, 0);
+  });
 }

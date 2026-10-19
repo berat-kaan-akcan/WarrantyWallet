@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -178,6 +179,16 @@ List<PlannedReminder> planReminders(Product p, DateTime now) {
 /// Schedules warranty reminders on the device.
 abstract class ReminderScheduler {
   Future<void> init();
+
+  /// Asks for the notification permission. Called after sign-in, not at first launch.
+  Future<void> requestPermission();
+
+  /// Product ids of reminders the user tapped while the app was running.
+  Stream<String> get openedProducts;
+
+  /// The product id whose reminder launched the app, once; null otherwise.
+  Future<String?> takeLaunchProduct();
+
   Future<void> syncProduct(Product p);
   Future<void> cancelProduct(String productId);
   Future<void> syncAll(List<Product> products);
@@ -186,7 +197,9 @@ abstract class ReminderScheduler {
 /// flutter_local_notifications implementation.
 class LocalReminderScheduler implements ReminderScheduler {
   final _plugin = FlutterLocalNotificationsPlugin();
+  final _opened = StreamController<String>.broadcast();
   bool _ready = false;
+  bool _launchTaken = false;
 
   static const _details = NotificationDetails(
     android: AndroidNotificationDetails(
@@ -208,12 +221,37 @@ class LocalReminderScheduler implements ReminderScheduler {
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: DarwinInitializationSettings(),
     );
-    await _plugin.initialize(settings);
+    await _plugin.initialize(settings, onDidReceiveNotificationResponse: (r) {
+      final id = r.payload;
+      if (id != null && id.isNotEmpty) _opened.add(id);
+    });
+    _ready = true;
+  }
+
+  @override
+  Future<void> requestPermission() async {
+    if (!_ready) return;
     await _plugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
-    _ready = true;
+    await _plugin
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
+  }
+
+  @override
+  Stream<String> get openedProducts => _opened.stream;
+
+  @override
+  Future<String?> takeLaunchProduct() async {
+    if (!_ready || _launchTaken) return null;
+    _launchTaken = true;
+    final details = await _plugin.getNotificationAppLaunchDetails();
+    if (details?.didNotificationLaunchApp != true) return null;
+    final id = details!.notificationResponse?.payload;
+    return id == null || id.isEmpty ? null : id;
   }
 
   @override
@@ -257,9 +295,25 @@ class LocalReminderScheduler implements ReminderScheduler {
 class FakeReminderScheduler implements ReminderScheduler {
   final synced = <String>[];
   final cancelled = <String>[];
+  final opened = StreamController<String>.broadcast();
+  String? launchProduct;
+  int permissionRequests = 0;
 
   @override
   Future<void> init() async {}
+
+  @override
+  Future<void> requestPermission() async => permissionRequests++;
+
+  @override
+  Stream<String> get openedProducts => opened.stream;
+
+  @override
+  Future<String?> takeLaunchProduct() async {
+    final id = launchProduct;
+    launchProduct = null;
+    return id;
+  }
 
   @override
   Future<void> syncProduct(Product p) async => synced.add(p.id);

@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../dashboard/dashboard_screen.dart';
+import '../../state/providers.dart';
 import '../products/add_product_screen.dart';
+import '../products/product_detail_screen.dart';
 import '../products/product_list_screen.dart';
 import '../service/service_history_screen.dart';
 import 'home_screen.dart';
@@ -17,8 +21,34 @@ class MainShell extends ConsumerStatefulWidget {
 
 class _MainShellState extends ConsumerState<MainShell> {
   int _index = 0;
+  StreamSubscription<String>? _taps;
 
   void _goTo(int i) => setState(() => _index = i);
+
+  @override
+  void initState() {
+    super.initState();
+    final scheduler = ref.read(reminderSchedulerProvider);
+    // Signed in: now is the moment to ask for the notification permission.
+    unawaited(scheduler.requestPermission().catchError((Object _) {}));
+    _taps = scheduler.openedProducts.listen(_openProduct);
+    unawaited(scheduler.takeLaunchProduct().then((id) {
+      if (id != null) _openProduct(id);
+    }).catchError((Object _) {}));
+  }
+
+  @override
+  void dispose() {
+    _taps?.cancel();
+    super.dispose();
+  }
+
+  /// A tapped reminder opens its product.
+  void _openProduct(String productId) {
+    if (!mounted) return;
+    Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => ProductDetailScreen(productId: productId)));
+  }
 
   @override
   Widget build(BuildContext context) {
