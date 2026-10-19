@@ -140,7 +140,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
       ));
     } on ApiException catch (e) {
       if (!mounted) return;
-      final fields = e.fields.isEmpty ? '' : ' (${e.fields.keys.join(', ')})';
+      final fields = e.fieldList.isEmpty ? '' : ' (${e.fieldList})';
       showSnack(context, '${e.userMessage}$fields', error: true);
     }
   }

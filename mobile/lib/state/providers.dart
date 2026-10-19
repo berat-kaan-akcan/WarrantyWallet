@@ -64,12 +64,20 @@ class SessionRefresher {
 /// Authentication state.
 class AuthState {
   const AuthState(
-      {this.user, this.loading = false, this.error, this.initialized = false});
+      {this.user,
+      this.loading = false,
+      this.error,
+      this.initialized = false,
+      this.offline = false});
 
   final AppUser? user;
   final bool loading;
   final String? error;
   final bool initialized;
+
+  /// A saved session exists but the server could not be reached at start-up. The session is
+  /// kept; the app offers a retry instead of the login screen.
+  final bool offline;
 
   bool get isLoggedIn => user != null;
 
@@ -111,9 +119,14 @@ class AuthController extends StateNotifier<AuthState> {
     } on ApiException catch (e) {
       if (e.isUnauthorized) await _tokens.clear();
       if (!mounted) return;
-      state = AuthState(
-          initialized: true, error: e.isNetwork ? e.userMessage : null);
+      state = AuthState(initialized: true, offline: e.isNetwork);
     }
+  }
+
+  /// Tries the saved session again after an offline start.
+  Future<void> retryRestore() {
+    state = const AuthState();
+    return restore();
   }
 
   Future<bool> login(String email, String password) =>
@@ -163,7 +176,35 @@ class AuthController extends StateNotifier<AuthState> {
       // Signing out locally must work offline too.
     }
     await _tokens.clear();
+    await _clearSessionData();
     state = const AuthState(initialized: true);
+  }
+
+  /// Forgets everything that belongs to the signed-out account: its device reminders and the
+  /// cached lists, so the next account on this phone neither sees nor gets notified about them.
+  Future<void> _clearSessionData() async {
+    try {
+      await _ref.read(reminderSchedulerProvider).syncAll(const []);
+    } catch (_) {
+      // Reminders are best effort; signing out must still succeed.
+    }
+    for (final p in <ProviderOrFamily>[
+      productsProvider,
+      expiringProvider,
+      dashboardProvider,
+      productProvider,
+      documentsProvider,
+      serviceStatusFilterProvider,
+      serviceHistoryProvider,
+      serviceRecordProvider,
+      productServiceRecordsProvider,
+      familyProvider,
+      familyProductsProvider,
+      serviceCityProvider,
+      serviceCentersProvider,
+    ]) {
+      _ref.invalidate(p);
+    }
   }
 
   /// Updates the signed-in user after a profile change.
@@ -174,6 +215,7 @@ class AuthController extends StateNotifier<AuthState> {
   void sessionExpired() {
     if (state.isLoggedIn) {
       _tokens.clear().ignore();
+      _clearSessionData().ignore();
       state = const AuthState(
           initialized: true,
           error: 'Oturumunuzun süresi doldu. Lütfen tekrar giriş yapın.');

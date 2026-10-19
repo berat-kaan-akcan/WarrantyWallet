@@ -33,7 +33,6 @@ class SettingsScreen extends ConsumerWidget {
     final navigator = Navigator.of(context);
     try {
       await ref.read(repositoryProvider).deleteAccount();
-      await ref.read(reminderSchedulerProvider).syncAll(const []);
       await ref.read(authControllerProvider.notifier).logout();
       navigator.popUntil((r) => r.isFirst);
     } on ApiException catch (e) {

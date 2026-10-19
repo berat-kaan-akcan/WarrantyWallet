@@ -268,9 +268,14 @@ class FakeReminderScheduler implements ReminderScheduler {
   Future<void> cancelProduct(String productId) async =>
       cancelled.add(productId);
 
+  /// The product ids of every syncAll call; an empty list means all reminders were cancelled.
+  final syncAllCalls = <List<String>>[];
+
   @override
-  Future<void> syncAll(List<Product> products) async =>
-      synced.addAll(products.map((p) => p.id));
+  Future<void> syncAll(List<Product> products) async {
+    synced.addAll(products.map((p) => p.id));
+    syncAllCalls.add([for (final p in products) p.id]);
+  }
 }
 
 /// Human description of the next reminder for the detail screen.

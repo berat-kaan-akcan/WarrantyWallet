@@ -59,11 +59,44 @@ class ApiException implements Exception {
         return 'Bir ailede en fazla 8 kişi olabilir.';
       case 'invalid_backup':
         return 'Bu dosya bir Warranty Wallet yedeği değil.';
+      case 'invalid_verification_token':
+        return 'Doğrulama bağlantısı geçersiz veya süresi dolmuş.';
+      case 'not_in_family':
+        return 'Bir aileye bağlı değilsiniz.';
+      case 'forbidden':
+        return 'Bu işlemi yalnızca yetkili kişi yapabilir.';
+      case 'conflict':
+        return 'Bu kayıt zaten var.';
+      case 'unavailable':
+        return 'Bu özellik şu anda kullanılamıyor.';
+      case 'bad_request':
+        return 'İstek işlenemedi. Lütfen tekrar deneyin.';
     }
+    // Server messages are English; never show them to the user.
     return status >= 500
         ? 'Sunucu hatası. Lütfen daha sonra tekrar deneyin.'
-        : message;
+        : 'İşlem tamamlanamadı. Lütfen tekrar deneyin.';
   }
+
+  /// Turkish labels for the field names validation errors carry.
+  static const fieldLabels = {
+    'name': 'ürün adı',
+    'brand': 'marka',
+    'model': 'model',
+    'category': 'kategori',
+    'serial_number': 'seri numarası',
+    'barcode': 'barkod',
+    'purchase_date': 'satın alma tarihi',
+    'warranty_months': 'garanti süresi',
+    'price': 'fiyat',
+    'currency': 'para birimi',
+    'seller': 'satıcı',
+    'notes': 'notlar',
+  };
+
+  /// The invalid fields as a Turkish list, e.g. "satın alma tarihi, fiyat"; empty if none are known.
+  String get fieldList =>
+      fields.keys.map((k) => fieldLabels[k]).whereType<String>().join(', ');
 
   @override
   String toString() => 'ApiException($status, $code, $message)';

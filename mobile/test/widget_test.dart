@@ -37,7 +37,8 @@ List<Override> overrides(FakeRepository repo,
     FakeCodeScanner? scanner,
     PushService? push,
     BackupFiles? backup,
-    LinkOpener? links}) {
+    LinkOpener? links,
+    ReceiptImagePicker? picker}) {
   final tokens = MemoryTokenStore()..token = token;
   return [
     repositoryProvider.overrideWithValue(repo),
@@ -45,7 +46,7 @@ List<Override> overrides(FakeRepository repo,
     ocrServiceProvider.overrideWithValue(NoopOcrService()),
     reminderSchedulerProvider
         .overrideWithValue(scheduler ?? FakeReminderScheduler()),
-    imageSourceProvider.overrideWithValue(FakePicker()),
+    imageSourceProvider.overrideWithValue(picker ?? FakePicker()),
     codeScannerProvider.overrideWithValue(scanner ?? FakeCodeScanner()),
     pushServiceProvider.overrideWithValue(push ?? FakePushService()),
     backupFilesProvider.overrideWithValue(backup ?? FakeBackupFiles()),

@@ -48,6 +48,11 @@ class FakeRepository implements WarrantyRepository {
   final created = <ProductDraft>[];
   final uploads = <String>[];
   String? loginError;
+
+  /// Thrown by me() (session restore) and uploadDocument() when set.
+  ApiException? meError;
+  ApiException? uploadError;
+  int serviceRecordsCreated = 0;
   Object? diagnoseError;
   final diagnoseCalls = <String>[];
   Diagnosis diagnosis = const Diagnosis(
@@ -80,7 +85,10 @@ class FakeRepository implements WarrantyRepository {
   int resendCalls = 0;
 
   @override
-  Future<AppUser> me() async => user;
+  Future<AppUser> me() async {
+    if (meError != null) throw meError!;
+    return user;
+  }
 
   @override
   Future<bool> resendVerification() async {
@@ -309,6 +317,7 @@ class FakeRepository implements WarrantyRepository {
   Future<ProductDocument> uploadDocument(
       String productId, String type, Uint8List bytes, String filename,
       {String serviceRecordId = ''}) async {
+    if (uploadError != null) throw uploadError!;
     uploads.add('$productId/$type/$filename');
     return ProductDocument(
         id: 'd1',
@@ -331,18 +340,20 @@ class FakeRepository implements WarrantyRepository {
 
   @override
   Future<ServiceRecord> createServiceRecord(
-          String productId, ProblemType problem, String description) async =>
-      ServiceRecord(
-        id: 's1',
-        productId: productId,
-        problem: problem,
-        status: ServiceStatus.open,
-        underWarranty: true,
-        checklist: const [
-          ChecklistItem('invoice', 'Fatura / fiş', true),
-          ChecklistItem('warranty', 'Garanti belgesi', false),
-        ],
-      );
+      String productId, ProblemType problem, String description) async {
+    serviceRecordsCreated++;
+    return ServiceRecord(
+      id: 's1',
+      productId: productId,
+      problem: problem,
+      status: ServiceStatus.open,
+      underWarranty: true,
+      checklist: const [
+        ChecklistItem('invoice', 'Fatura / fiş', true),
+        ChecklistItem('warranty', 'Garanti belgesi', false),
+      ],
+    );
+  }
 
   @override
   Future<List<ServiceRecord>> serviceRecords({String productId = ''}) async =>

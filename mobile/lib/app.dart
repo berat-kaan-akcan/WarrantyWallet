@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/api_client.dart';
 import 'features/auth/login_screen.dart';
 import 'features/home/shell.dart';
 import 'state/providers.dart';
@@ -27,6 +29,10 @@ class _WarrantyWalletAppState extends ConsumerState<WarrantyWalletApp> {
     return MaterialApp(
       title: 'Warranty Wallet',
       debugShowCheckedModeBanner: false,
+      // The app is Turkish only: date pickers, text-selection menus and tooltips follow it.
+      locale: const Locale('tr', 'TR'),
+      supportedLocales: const [Locale('tr', 'TR')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       theme: ThemeData(colorSchemeSeed: brandColor, useMaterial3: true),
       darkTheme: ThemeData(
           colorSchemeSeed: brandColor,
@@ -36,7 +42,15 @@ class _WarrantyWalletAppState extends ConsumerState<WarrantyWalletApp> {
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
           : auth.isLoggedIn
               ? const MainShell()
-              : const LoginScreen(),
+              : auth.offline
+                  ? Scaffold(
+                      body: SafeArea(
+                          child: ErrorState(
+                              error: const ApiException(0, 'network', ''),
+                              onRetry: () => ref
+                                  .read(authControllerProvider.notifier)
+                                  .retryRestore())))
+                  : const LoginScreen(),
     );
   }
 }

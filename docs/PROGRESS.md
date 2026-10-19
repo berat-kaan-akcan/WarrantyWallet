@@ -61,6 +61,13 @@ Son güncelleme: 2026-10-17
 21. **Servis merkezi bulma (2026-10-17)** — Migration `0009`: `service_centers` (marka, şehir, ilçe, adres, telefon, web, isteğe bağlı koordinat; eşleşme için Türkçe karakterden bağımsız anahtarlar). `GET /products/{id}/service-centers` ürünün markasına göre şehir filtresiyle listeliyor, konum verilirse mesafeye göre sıralıyor; kayıt yoksa API anahtarı gerektirmeyen Google Haritalar araması bağlantısı veriyor. Yönetici paneline "Servis merkezleri" sekmesi (ekle, düzenle, sil) eklendi ve Chromium'da 390 px genişlikte denendi. Gerçek servis adresleri uydurulmadı: liste yönetici tarafından doldurulmalı. Mobil: ürün detayında "Yetkili Servis Bul" ekranı (şehir araması, telefonla arama, web sitesi, harita araması; yeni bağımlılık `url_launcher`). Konumdan arama için cihaz konum izni eklenmedi, şehirle aranıyor.
    CI düzeltmesi: `file_picker` 11.x, bu projedeki AGP 9 + `builtInKotlin=false` ayarıyla Android derlemesini kırdı; 10.3.3'e sabitlendi. 10.3.3 de Kotlin'i JVM 1.8, Java'yı 11 hedefiyle derlediği için `android/gradle.properties` içinde `kotlin.jvm.target.validation.mode=warning` ayarlandı.
 22. **Servis merkezleri için toplu CSV içe aktarma (2026-10-19)** — `POST /admin/service-centers/import`: Türkçe ya da İngilizce başlıklı, `,` veya `;` ayraçlı (Türkçe Excel, ondalık virgül) CSV. Tüm satırlar önce doğrulanıyor; hatalı satır varsa hiçbir şey yazılmıyor ve satır numaralı hata listesi dönüyor. Kayıtlı merkezler (marka + ad + şehir, büyük/küçük harf ve Türkçe karakterden bağımsız) atlanıyor. Yönetici panelinin "Servis merkezleri" sekmesine dosya seçip içe aktarma eklendi, hatalar Türkçe gösteriliyor; Chromium'da hatalı ve geçerli dosyayla denendi. Liste hâlâ boş: gerçek veriyi yöneticinin yüklemesi gerekiyor.
+23. **Son kullanıcı incelemesi ve öncelikli düzeltmeler (2026-10-19)** — Uygulama baştan sona kullanıcı gözüyle incelendi (rapor proje dosyalarında: `warrantywallet/kullanici-incelemesi.md`). Yüksek öncelikli beş madde düzeltildi:
+   - Uygulama Türkçe yerelleştirildi (`flutter_localizations`, tr_TR). Tarih seçici, kopyala/yapıştır menüsü ve ipuçları artık Türkçe.
+   - Çıkışta ve oturum süresi dolunca cihazdaki garanti hatırlatıcıları iptal ediliyor, önbellekteki listeler sıfırlanıyor. Aynı telefonda açılan başka bir hesap öncekinin ürünlerini görmüyor ve bildirimlerini almıyor.
+   - İnternet yokken açılışta oturum korunuyor. Giriş ekranı yerine "Bağlantı yok / Tekrar dene" gösteriliyor.
+   - Bütün sunucu hata kodları Türkçeye çevrildi. Bilinmeyen bir kodda İngilizce sunucu mesajı yerine Türkçe genel bir mesaj çıkıyor. Ürün formundaki hatalı alanlar Türkçe adlarıyla listeleniyor.
+   - Servis kaydında fotoğraf yüklemesi başarısız olursa tekrar denemek ikinci bir kayıt açmıyor, yalnızca kalan fotoğrafları yüklüyor. Arıza fotoğraflarına ekran okuyucu etiketi eklendi.
+   Mobil testler: 74/74.
 
 ## Son durum (2026-10-17, kalanlar turu sonrası)
 Son commit'in CI koşusu yeşil (backend, PostgreSQL entegrasyonu, Docker imajı, mobil format/analiz/test, Android debug APK). Bu turda üç koşu kırmızı kaldı ve hemen düzeltildi: `6c0bb9b` gofmt eksikti (`1bb2d9b` ile düzeldi); `411efdc` ve `7e9763a`'da Android APK, `file_picker` sürümü yüzünden derlenmedi (`a48c74c` ile düzeldi). Yerelde: backend 95 test fonksiyonu geçti (PostgreSQL sözleşme testleri `-tags pgx` ile ayrıca geçti), mobil 69/69.
@@ -82,6 +89,7 @@ Son commit'in CI koşusu yeşil (backend, PostgreSQL entegrasyonu, Docker imajı
 - [x] FCM push (backend gönderici + cihaz kaydı; mobilde Firebase projesi bağlanınca etkin)
 - [x] Servis paketi PDF'ine servis ücreti ve zaman çizelgesini eklemek
 - [x] Admin paneline AI arıza asistanı kullanım istatistikleri; panelde refresh token ile oturum uzatma
+- [ ] İncelemedeki orta ve düşük öncelikli maddeler (bildirime dokununca ürünü açma, belge silme/galeriden ekleme, servis kaydından PDF, metin tutarlılığı)
 - [ ] iOS derlemesi bu ortamda doğrulanamadı (macOS gerekir); gerçek cihazda kamera taraması elle denenmeli
 - [ ] Gemini 3.x modelleri yoğunlukta 503 verebiliyor; üretimde `GEMINI_FALLBACK_MODELS` izlenmeli
 

@@ -26,6 +26,9 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
   bool _busy = false;
   ServiceRecord? _created;
 
+  /// The record once created, while its photos are still being uploaded.
+  ServiceRecord? _pending;
+
   @override
   void dispose() {
     _description.dispose();
@@ -46,18 +49,31 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
     setState(() => _busy = true);
     final repo = ref.read(repositoryProvider);
     try {
-      final rec = await repo.createServiceRecord(
+      // A retry after a failed photo upload reuses the record instead of creating a second one.
+      final rec = _pending ??= await repo.createServiceRecord(
           widget.product.id, problem, _description.text.trim());
-      for (final photo in _photos) {
+      while (_photos.isNotEmpty) {
+        final photo = _photos.first;
         await repo.uploadDocument(
             widget.product.id, 'photo', photo.bytes, photo.name,
             serviceRecordId: rec.id);
+        if (mounted) setState(() => _photos.removeAt(0));
       }
       if (!mounted) return;
       refreshProducts(ref, widget.product.id);
       setState(() => _created = rec);
     } on ApiException catch (e) {
-      if (mounted) showSnack(context, e.userMessage, error: true);
+      if (!mounted) return;
+      if (_pending != null) {
+        refreshProducts(ref, widget.product.id);
+        showSnack(
+            context,
+            'Servis kaydı oluşturuldu ama ${_photos.length} fotoğraf yüklenemedi. '
+            'Tekrar denediğinizde yalnızca fotoğraflar yüklenir.',
+            error: true);
+      } else {
+        showSnack(context, e.userMessage, error: true);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -164,7 +180,10 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.memory(_photos[i].bytes,
-                        width: 88, height: 88, fit: BoxFit.cover),
+                        semanticLabel: 'Arıza fotoğrafı ${i + 1}',
+                        width: 88,
+                        height: 88,
+                        fit: BoxFit.cover),
                   ),
                   Positioned(
                     right: 0,
