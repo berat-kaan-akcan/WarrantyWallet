@@ -6,6 +6,7 @@ import '../../core/formatters.dart';
 import '../../models/models.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
+import '../products/document_viewer.dart';
 
 /// Servis geçmişi: özet, durum filtresi ve kayıt listesi.
 class ServiceHistoryScreen extends ConsumerWidget {
@@ -369,6 +370,21 @@ class ServiceRecordDetailScreen extends ConsumerWidget {
     }
   }
 
+  /// The service pack (invoice, warranty card, timeline) is needed again at the service desk.
+  Future<void> _sharePdf(
+      BuildContext context, WidgetRef ref, ServiceRecord r) async {
+    try {
+      final bytes = await ref
+          .read(repositoryProvider)
+          .servicePack(r.productId, serviceRecordId: r.id);
+      await shareBytes(bytes, 'servis-paketi.pdf');
+    } on ApiException catch (e) {
+      if (context.mounted) showSnack(context, e.userMessage, error: true);
+    } on Exception {
+      if (context.mounted) showSnack(context, 'PDF paylaşılamadı', error: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final record = ref.watch(serviceRecordProvider(recordId));
@@ -376,6 +392,13 @@ class ServiceRecordDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Servis kaydı'),
         actions: [
+          if (record.valueOrNull != null)
+            IconButton(
+              key: const Key('service_pdf'),
+              tooltip: 'Servis paketi PDF',
+              icon: const Icon(Icons.picture_as_pdf_outlined),
+              onPressed: () => _sharePdf(context, ref, record.value!),
+            ),
           if (record.valueOrNull != null)
             IconButton(
               key: const Key('delete_service'),

@@ -122,6 +122,7 @@ void main() {
     await tester.pumpWidget(
         wrap(const ServiceRecordDetailScreen(recordId: 's2'), repo));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('service_pdf')), findsOneWidget);
     await tester.tap(find.byKey(const Key('update_service')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('event_note')), findsNothing);
