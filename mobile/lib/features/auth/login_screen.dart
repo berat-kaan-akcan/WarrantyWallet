@@ -18,6 +18,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _name = TextEditingController();
+  final _password2 = TextEditingController();
   bool _registerMode = false;
   bool _obscure = true;
 
@@ -26,6 +27,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _email.dispose();
     _password.dispose();
     _name.dispose();
+    _password2.dispose();
     super.dispose();
   }
 
@@ -119,8 +121,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               : AutofillHints.password
                         ],
                         validator: validatePassword,
-                        onFieldSubmitted: (_) => _submit(),
+                        textInputAction: _registerMode
+                            ? TextInputAction.next
+                            : TextInputAction.done,
+                        onFieldSubmitted: (_) {
+                          if (!_registerMode) _submit();
+                        },
                       ),
+                      if (_registerMode) ...[
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          key: const Key('password2'),
+                          controller: _password2,
+                          obscureText: _obscure,
+                          decoration: const InputDecoration(
+                              labelText: 'Şifre (tekrar)',
+                              border: OutlineInputBorder()),
+                          autofillHints: const [AutofillHints.newPassword],
+                          validator: (v) => v == _password.text
+                              ? null
+                              : 'Şifreler aynı değil',
+                          onFieldSubmitted: (_) => _submit(),
+                        ),
+                      ],
                       if (!_registerMode)
                         Align(
                           alignment: Alignment.centerRight,

@@ -73,6 +73,7 @@ Son güncelleme: 2026-10-17
 26. **Metin tutarlılığı (2026-10-20)** — Uygulamadaki "sen" hitapları "siz"e çevrildi (giriş, ana sayfa, ürün ekleme, ürün listesi). Ana sayfadaki 90 günlük bölümün adı "Garantisi 90 gün içinde bitenler" oldu; "Yakında bitiyor" durumu 30 gün anlamında kaldı. Boş servis geçmişi artık gerçek düğme adını ("Servis Kaydı Oluştur") gösteriyor.
 27. **Arama ve ayarlar (2026-10-20)** — Ürün araması artık yazarken çalışıyor (kısa bir bekleme ile), temizle düğmesi yazarken görünüyor. Çıkış yapmadan önce onay soruluyor. Ayarlar'daki "Sunucu" adresi yalnızca geliştirme derlemesinde görünüyor. Mobil testler: 79/79.
 28. **Yönetici paneli (2026-10-20)** — Yönetici yetkisi verme/kaldırma artık onay istiyor; panel bilinmeyen hata kodlarında İngilizce sunucu mesajı yerine Türkçe metin gösteriyor. Chromium'da onay vazgeçme ve kabul yollarıyla denendi.
+29. **Kayıtta şifre tekrarı (2026-10-20)** — Kayıt formuna "Şifre (tekrar)" alanı eklendi; şifreler aynı değilse kayıt gönderilmiyor. Mobil testler: 80/80.
 
 ## Son durum (2026-10-17, kalanlar turu sonrası)
 Son commit'in CI koşusu yeşil (backend, PostgreSQL entegrasyonu, Docker imajı, mobil format/analiz/test, Android debug APK). Bu turda üç koşu kırmızı kaldı ve hemen düzeltildi: `6c0bb9b` gofmt eksikti (`1bb2d9b` ile düzeldi); `411efdc` ve `7e9763a`'da Android APK, `file_picker` sürümü yüzünden derlenmedi (`a48c74c` ile düzeldi). Yerelde: backend 95 test fonksiyonu geçti (PostgreSQL sözleşme testleri `-tags pgx` ile ayrıca geçti), mobil 69/69.
@@ -94,7 +95,7 @@ Son commit'in CI koşusu yeşil (backend, PostgreSQL entegrasyonu, Docker imajı
 - [x] FCM push (backend gönderici + cihaz kaydı; mobilde Firebase projesi bağlanınca etkin)
 - [x] Servis paketi PDF'ine servis ücreti ve zaman çizelgesini eklemek
 - [x] Admin paneline AI arıza asistanı kullanım istatistikleri; panelde refresh token ile oturum uzatma
-- [ ] İncelemedeki orta ve düşük öncelikli maddeler (ana sayfa çipleri ve dashboard kutularına dokunma, kayıtta şifre tekrarı ve KVKK onayı, aile davetini paylaşma, yönetici panelinde kullanıcı sayfalama)
+- [ ] İncelemedeki orta ve düşük öncelikli maddeler (ana sayfa çipleri ve dashboard kutularına dokunma, kayıtta KVKK onayı, aile davetini paylaşma, yönetici panelinde kullanıcı sayfalama)
 - [ ] iOS derlemesi bu ortamda doğrulanamadı (macOS gerekir); gerçek cihazda kamera taraması elle denenmeli
 - [ ] Gemini 3.x modelleri yoğunlukta 503 verebiliyor; üretimde `GEMINI_FALLBACK_MODELS` izlenmeli
 

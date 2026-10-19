@@ -215,4 +215,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(repo.calls.where((c) => c.startsWith('logout')), hasLength(1));
   });
+
+  testWidgets('registration asks for the password twice', (tester) async {
+    useTallScreen(tester);
+    await tester.pumpWidget(ProviderScope(
+        overrides: overrides(FakeRepository()),
+        child: const WarrantyWalletApp()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hesabınız yok mu? Kayıt olun'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('email')), 'yeni@test.io');
+    await tester.enterText(find.byKey(const Key('password')), 'supersecret');
+    await tester.enterText(find.byKey(const Key('password2')), 'supersecreT');
+    await tester.tap(find.byKey(const Key('submit')));
+    await tester.pumpAndSettle();
+    expect(find.text('Şifreler aynı değil'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('password2')), 'supersecret');
+    await tester.tap(find.byKey(const Key('submit')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('password2')), findsNothing); // signed in
+  });
 }
