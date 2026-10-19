@@ -67,7 +67,8 @@ async function api(method, path, body, retried = false) {
   const data = res.status === 204 ? null : await res.json().catch(() => null);
   if (!res.ok) {
     const code = data && data.error ? data.error.code : '';
-    const msg = MESSAGES[code] || (data && data.error ? data.error.message || code : 'HTTP ' + res.status);
+    // Server messages are English; show the code only as a reference.
+    const msg = MESSAGES[code] || 'İşlem tamamlanamadı (' + (code || 'HTTP ' + res.status) + ').';
     const err = new Error(msg);
     err.fields = data && data.error ? data.error.fields : null;
     throw err;
@@ -234,6 +235,8 @@ function renderUsers() {
 }
 
 async function setRole(u, role) {
+  const what = role === 'admin' ? 'yönetici yetkisi verilsin' : 'yönetici yetkisi kaldırılsın';
+  if (!confirm(u.email + ' için ' + what + ' mi?')) return;
   try {
     await api('PATCH', '/admin/users/' + encodeURIComponent(u.id), { role });
     say(u.email + ' güncellendi.');
