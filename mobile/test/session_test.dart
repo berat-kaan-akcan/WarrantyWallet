@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:warranty_wallet/app.dart';
 import 'package:warranty_wallet/core/api_client.dart';
 import 'package:warranty_wallet/features/products/add_product_screen.dart';
+import 'package:warranty_wallet/features/products/product_detail_screen.dart';
+import 'package:warranty_wallet/models/models.dart';
 import 'package:warranty_wallet/features/service/report_issue_screen.dart';
 import 'package:warranty_wallet/services/services.dart';
 import 'package:warranty_wallet/state/providers.dart';
@@ -140,5 +142,38 @@ void main() {
         child: const WarrantyWalletApp()));
     await tester.pumpAndSettle();
     expect(scheduler.permissionRequests, 0);
+  });
+
+  testWidgets(
+      'a wrong document can be deleted; documents come from the gallery too',
+      (tester) async {
+    useTallScreen(tester);
+    final repo = FakeRepository()
+      ..docs.add(const ProductDocument(
+          id: 'd9',
+          type: 'invoice',
+          contentType: 'application/pdf',
+          originalName: 'fatura.pdf'));
+    await tester.pumpWidget(ProviderScope(
+        overrides: overrides(repo, picker: _OnePhotoPicker()),
+        child: const MaterialApp(home: ProductDetailScreen(productId: 'p1'))));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Faturayı Gör'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('delete_document')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm_delete_document')));
+    await tester.pumpAndSettle();
+    expect(repo.deletedDocs, ['d9']);
+    expect(find.text('Faturayı Gör'), findsOneWidget); // back on the detail
+
+    await tester.tap(find.text('Ürün Fotoğrafları'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ekle'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('source_gallery')));
+    await tester.pumpAndSettle();
+    expect(repo.uploads, ['p1/photo/a.png']);
   });
 }

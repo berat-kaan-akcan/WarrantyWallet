@@ -311,7 +311,14 @@ class FakeRepository implements WarrantyRepository {
   @override
   Future<List<ProductDocument>> documents(String productId,
           {String type = ''}) async =>
-      const [];
+      [
+        for (final d in docs)
+          if (type.isEmpty || d.type == type) d
+      ];
+
+  /// Stored documents (all products) and the ids deleteDocument removed.
+  final docs = <ProductDocument>[];
+  final deletedDocs = <String>[];
 
   @override
   Future<ProductDocument> uploadDocument(
@@ -330,7 +337,10 @@ class FakeRepository implements WarrantyRepository {
   Future<Uint8List> documentBytes(String documentId) async => Uint8List(0);
 
   @override
-  Future<void> deleteDocument(String documentId) async {}
+  Future<void> deleteDocument(String documentId) async {
+    deletedDocs.add(documentId);
+    docs.removeWhere((d) => d.id == documentId);
+  }
 
   @override
   String documentUrl(String documentId) => 'http://test/$documentId';

@@ -137,13 +137,37 @@ class _ProductDetail extends ConsumerWidget {
     }
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-          builder: (_) => DocumentViewer(documents: matching, title: label)),
+          builder: (_) => DocumentViewer(
+              documents: matching, title: label, productId: product.id)),
     );
   }
 
   Future<void> _addDocument(
       BuildContext context, WidgetRef ref, String type) async {
-    final picked = await ref.read(imageSourceProvider).pick(camera: true);
+    final camera = await showModalBottomSheet<bool>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              key: const Key('source_camera'),
+              leading: const Icon(Icons.photo_camera),
+              title: const Text('Fotoğraf çek'),
+              onTap: () => Navigator.pop(ctx, true),
+            ),
+            ListTile(
+              key: const Key('source_gallery'),
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Galeriden seç'),
+              onTap: () => Navigator.pop(ctx, false),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (camera == null || !context.mounted) return;
+    final picked = await ref.read(imageSourceProvider).pick(camera: camera);
     if (picked == null || !context.mounted) return;
     try {
       await ref
@@ -274,9 +298,15 @@ class _ProductDetail extends ConsumerWidget {
                   _openDocument(context, ref, 'warranty', 'Garanti belgesi'),
             ),
             _ActionTile(
+              icon: Icons.photo_library,
+              title: 'Ürün Fotoğrafları',
+              onTap: () =>
+                  _openDocument(context, ref, 'photo', 'Ürün fotoğrafı'),
+            ),
+            _ActionTile(
               icon: Icons.add_photo_alternate,
               title: 'Belge Ekle',
-              subtitle: 'Fatura veya garanti belgesi fotoğrafı',
+              subtitle: 'Fatura, garanti belgesi veya ürün fotoğrafı',
               onTap: () => _chooseDocType(context, ref),
             ),
             _ActionTile(
