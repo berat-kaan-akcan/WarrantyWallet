@@ -7,6 +7,8 @@ import 'package:warranty_wallet/app.dart';
 import 'package:warranty_wallet/core/api_client.dart';
 import 'package:warranty_wallet/features/products/add_product_screen.dart';
 import 'package:warranty_wallet/features/products/product_detail_screen.dart';
+import 'package:warranty_wallet/features/products/product_list_screen.dart';
+import 'package:warranty_wallet/features/settings/settings_screen.dart';
 import 'package:warranty_wallet/models/models.dart';
 import 'package:warranty_wallet/features/service/report_issue_screen.dart';
 import 'package:warranty_wallet/services/services.dart';
@@ -175,5 +177,42 @@ void main() {
     await tester.tap(find.byKey(const Key('source_gallery')));
     await tester.pumpAndSettle();
     expect(repo.uploads, ['p1/photo/a.png']);
+  });
+
+  testWidgets('search runs while typing and can be cleared', (tester) async {
+    useTallScreen(tester);
+    await tester.pumpWidget(ProviderScope(
+        overrides: overrides(FakeRepository()),
+        child: const MaterialApp(home: ProductListScreen())));
+    await tester.pumpAndSettle();
+    expect(find.text('ASUS TUF VG27AQ'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).first, 'sony');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+    expect(find.text('ASUS TUF VG27AQ'), findsNothing);
+    expect(find.text('Sony WH-1000XM5'), findsOneWidget);
+    await tester.tap(find.byTooltip('Aramayı temizle'));
+    await tester.pumpAndSettle();
+    expect(find.text('ASUS TUF VG27AQ'), findsOneWidget);
+  });
+
+  testWidgets('logout asks first', (tester) async {
+    useTallScreen(tester);
+    final repo = FakeRepository();
+    await tester.pumpWidget(ProviderScope(
+        overrides: overrides(repo, token: 'tok'),
+        child: const MaterialApp(home: SettingsScreen())));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('logout')));
+    await tester.tap(find.byKey(const Key('logout')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Vazgeç'));
+    await tester.pumpAndSettle();
+    expect(repo.calls.where((c) => c.startsWith('logout')), isEmpty);
+    await tester.tap(find.byKey(const Key('logout')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm_logout')));
+    await tester.pumpAndSettle();
+    expect(repo.calls.where((c) => c.startsWith('logout')), hasLength(1));
   });
 }

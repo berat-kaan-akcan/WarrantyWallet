@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -118,11 +119,12 @@ class SettingsScreen extends ConsumerWidget {
             title: Text('Garanti hatırlatıcıları'),
             subtitle: Text('Bitişe 90, 30 ve 7 gün kala saat 10:00'),
           ),
-          const ListTile(
-            leading: Icon(Icons.dns_outlined),
-            title: Text('Sunucu'),
-            subtitle: Text(apiBaseUrl),
-          ),
+          if (kDebugMode) // developer detail, hidden in release builds
+            const ListTile(
+              leading: Icon(Icons.dns_outlined),
+              title: Text('Sunucu'),
+              subtitle: Text(apiBaseUrl),
+            ),
           const Divider(),
           ListTile(
             key: const Key('logout'),
@@ -130,6 +132,24 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Çıkış yap'),
             onTap: () async {
               final navigator = Navigator.of(context);
+              final ok = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Çıkış yapılsın mı?'),
+                  content: const Text(
+                      'Bu cihazdaki garanti hatırlatıcıları da kapatılır. Tekrar giriş yaptığınızda geri gelir.'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Vazgeç')),
+                    FilledButton(
+                        key: const Key('confirm_logout'),
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Çıkış yap')),
+                  ],
+                ),
+              );
+              if (ok != true) return;
               await ref.read(authControllerProvider.notifier).logout();
               navigator.popUntil((r) => r.isFirst);
             },

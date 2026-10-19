@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,9 +23,24 @@ class ProductListScreen extends ConsumerStatefulWidget {
 class _ProductListScreenState extends ConsumerState<ProductListScreen> {
   ProductQuery _query = const ProductQuery();
   final _search = TextEditingController();
+  Timer? _debounce;
+
+  /// Searches as the user types, once they pause for a moment.
+  void _onSearchChanged(String v) {
+    setState(() {}); // shows or hides the clear button
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      if (!mounted) return;
+      final text = v.trim();
+      if (text == _query.text) return;
+      setState(() => _query = ProductQuery(
+          category: _query.category, status: _query.status, text: text));
+    });
+  }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _search.dispose();
     super.dispose();
   }
@@ -104,6 +121,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                         tooltip: 'Aramayı temizle',
                         icon: const Icon(Icons.clear),
                         onPressed: () {
+                          _debounce?.cancel();
                           _search.clear();
                           setState(() => _query = ProductQuery(
                               category: _query.category,
@@ -112,6 +130,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                       ),
               ),
               textInputAction: TextInputAction.search,
+              onChanged: _onSearchChanged,
               onSubmitted: (v) => setState(() => _query = ProductQuery(
                   category: _query.category,
                   status: _query.status,
