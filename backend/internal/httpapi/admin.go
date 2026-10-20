@@ -3,6 +3,7 @@ package httpapi
 import (
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/berat-kaan-akcan/WarrantyWallet/backend/internal/domain"
@@ -61,13 +62,42 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleAdminUsers: GET /admin/users?q=&limit=&offset= — newest first, q matches e-mail or
+// name ignoring case and Turkish letters. limit defaults to 50 (max 200).
 func (s *Server) handleAdminUsers(w http.ResponseWriter, r *http.Request) {
+	qv := r.URL.Query()
+	limit, offset := 50, 0
+	if v := qv.Get("limit"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 || n > 200 {
+			writeError(w, http.StatusUnprocessableEntity, "validation_failed", "invalid paging", map[string]string{"limit": "1-200"})
+			return
+		}
+		limit = n
+	}
+	if v := qv.Get("offset"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			writeError(w, http.StatusUnprocessableEntity, "validation_failed", "invalid paging", map[string]string{"offset": ">= 0"})
+			return
+		}
+		offset = n
+	}
 	users, err := s.Store.ListUsers(r.Context())
 	if err != nil {
 		s.storeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"items": users})
+	q := domain.FoldKey(qv.Get("q"))
+	matched := make([]domain.User, 0, len(users))
+	for i := len(users) - 1; i >= 0; i-- { // stores list oldest first
+		u := users[i]
+		if q == "" || strings.Contains(domain.FoldKey(u.Email+" "+u.Name), q) {
+			matched = append(matched, u)
+		}
+	}
+	page := matched[min(offset, len(matched)):min(offset+limit, len(matched))]
+	writeJSON(w, http.StatusOK, map[string]any{"items": page, "total": len(matched), "limit": limit, "offset": offset})
 }
 
 func (s *Server) handleAdminUpdateUser(w http.ResponseWriter, r *http.Request) {

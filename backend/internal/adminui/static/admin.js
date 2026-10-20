@@ -207,17 +207,34 @@ async function loadStats() {
   }
 }
 
-async function loadUsers() {
-  users = (await api('GET', '/admin/users')).items || [];
+const USER_PAGE = 50;
+let usersTotal = 0;
+let userSearchTimer = null;
+
+// loadUsers fetches the first page (more = false) or the next one; the server searches and pages.
+async function loadUsers(more = false) {
+  const q = new URLSearchParams({ limit: String(USER_PAGE), offset: String(more ? users.length : 0) });
+  const term = $('user-filter').value.trim();
+  if (term) q.set('q', term);
+  const res = await api('GET', '/admin/users?' + q);
+  users = more ? users.concat(res.items || []) : (res.items || []);
+  usersTotal = res.total || 0;
   renderUsers();
 }
 
+function searchUsers() {
+  clearTimeout(userSearchTimer);
+  userSearchTimer = setTimeout(() => loadUsers().catch((e) => {
+    if (e.message !== 'unauthorized') say('Yüklenemedi: ' + e.message, true);
+  }), 300);
+}
+
 function renderUsers() {
-  const q = $('user-filter').value.trim().toLocaleLowerCase('tr');
   const rows = $('users');
   rows.replaceChildren();
+  $('users-count').textContent = usersTotal ? usersTotal + ' kullanıcıdan ' + users.length + ' tanesi gösteriliyor.' : 'Kullanıcı bulunamadı.';
+  $('users-more').hidden = users.length >= usersTotal;
   for (const u of users) {
-    if (q && !(u.email + ' ' + u.name).toLocaleLowerCase('tr').includes(q)) continue;
     const tr = document.createElement('tr');
     const actions = document.createElement('td');
     if (u.id !== me.id) {
@@ -427,7 +444,10 @@ async function importCenters(ev) {
 $('login-form').addEventListener('submit', login);
 $('logout').addEventListener('click', () => logout('Çıkış yapıldı.', true));
 $('category-form').addEventListener('submit', saveCategory);
-$('user-filter').addEventListener('input', renderUsers);
+$('user-filter').addEventListener('input', searchUsers);
+$('users-more').addEventListener('click', () => loadUsers(true).catch((e) => {
+  if (e.message !== 'unauthorized') say('Yüklenemedi: ' + e.message, true);
+}));
 $('center-form').addEventListener('submit', saveCenter);
 $('center-cancel').addEventListener('click', resetCenterForm);
 $('center-filter').addEventListener('input', renderCenters);

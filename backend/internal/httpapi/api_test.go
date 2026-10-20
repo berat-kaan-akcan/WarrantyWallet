@@ -615,3 +615,35 @@ func TestCORSPreflight(t *testing.T) {
 		t.Fatalf("cors %d %v", res.StatusCode, res.Header)
 	}
 }
+
+func TestAdminUsersPaging(t *testing.T) {
+	h := newHarness(t)
+	admin := h.register("admin@ww.test", "Admin")
+	h.register("ayse@ww.test", "Ayşe Yılmaz")
+	h.register("can@ww.test", "Can Öztürk")
+	r := h.do("GET", "/api/v1/admin/users?limit=2", admin, nil).json(t)
+	items := r["items"].([]any)
+	if r["total"] != 3.0 || len(items) != 2 || items[0].(map[string]any)["email"] != "can@ww.test" {
+		t.Fatalf("first page %v", r)
+	}
+	r = h.do("GET", "/api/v1/admin/users?limit=2&offset=2", admin, nil).json(t)
+	if items := r["items"].([]any); len(items) != 1 || items[0].(map[string]any)["email"] != "admin@ww.test" {
+		t.Fatalf("second page %v", r)
+	}
+	if r := h.do("GET", "/api/v1/admin/users?offset=9", admin, nil).json(t); len(r["items"].([]any)) != 0 || r["total"] != 3.0 {
+		t.Fatalf("past the end %v", r)
+	}
+	// search ignores case and Turkish letters
+	r = h.do("GET", "/api/v1/admin/users?q=AYSE", admin, nil).json(t)
+	if items := r["items"].([]any); r["total"] != 1.0 || items[0].(map[string]any)["email"] != "ayse@ww.test" {
+		t.Fatalf("search %v", r)
+	}
+	if r := h.do("GET", "/api/v1/admin/users?q=ozturk", admin, nil).json(t); r["total"] != 1.0 {
+		t.Fatalf("search by name %v", r)
+	}
+	for _, bad := range []string{"limit=0", "limit=500", "offset=-1", "limit=x"} {
+		if r := h.do("GET", "/api/v1/admin/users?"+bad, admin, nil); r.Status != 422 {
+			t.Fatalf("%s: %d", bad, r.Status)
+		}
+	}
+}

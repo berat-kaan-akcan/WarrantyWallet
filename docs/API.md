@@ -463,7 +463,7 @@ Zaman çizelgesi de silinir; kayda bağlı fotoğraflar ürünün belgeleri olar
 | Metot | Yol | Açıklama |
 |---|---|---|
 | GET | `/admin/stats` | `{"users":2,"products":1,"extractions":{"ok":7,"failed":1,"sample_size":8,"by_provider":{"gemini":6,"rules":1,"none":1},"by_model":{"gemini-3.5-flash":6}},"diagnoses":{"total":3,"ai":1,"rules":2,"ai_failed":1,"by_model":{"gemini-2.5-flash":1}}}` |
-| GET | `/admin/users` | `{"items":[user...]}` |
+| GET | `/admin/users?q=&limit=50&offset=0` | En yeni önce; `q` e-posta/ad içinde arar (büyük/küçük harf ve Türkçe karakterden bağımsız), `limit` 1–200. `{"items":[user...],"total":55,"limit":50,"offset":0}` |
 | PATCH | `/admin/users/{id}` | `{"role":"admin"}` → güncel kullanıcı |
 | DELETE | `/admin/users/{id}` | `204` (kendini silemez) |
 | GET | `/admin/extraction-logs?failures=1&kind=receipt\|diagnosis` | Yapay zekâ kayıtları: fiş okuma ve arıza asistanı (`kind`, `provider`, `model`, `success`, `error`). Arıza açıklamasının kendisi saklanmaz. |
