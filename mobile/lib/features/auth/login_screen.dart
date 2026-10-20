@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
+import '../settings/privacy_screen.dart';
 import 'password_reset_screen.dart';
 
 /// Login / register screen.
@@ -142,6 +143,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ? null
                               : 'Şifreler aynı değil',
                           onFieldSubmitted: (_) => _submit(),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                            'Kayıt olarak aydınlatma metnini okuduğunuzu kabul edersiniz. '
+                            'Fiş okuma ve arıza asistanı kullanıldığında görüntü ve metinler Google Gemini\'ye gönderilir.',
+                            style: theme.textTheme.bodySmall),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton(
+                            key: const Key('privacy_notice'),
+                            onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                    builder: (_) => const PrivacyScreen())),
+                            child: const Text('Aydınlatma metnini oku'),
+                          ),
                         ),
                       ],
                       if (!_registerMode)

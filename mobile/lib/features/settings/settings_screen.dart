@@ -8,6 +8,7 @@ import '../../widgets/common.dart';
 import 'backup_screen.dart';
 import 'change_password_screen.dart';
 import 'family_screen.dart';
+import 'privacy_screen.dart';
 
 /// Hesap ve uygulama ayarları.
 class SettingsScreen extends ConsumerWidget {
@@ -118,6 +119,14 @@ class SettingsScreen extends ConsumerWidget {
             leading: Icon(Icons.notifications_active),
             title: Text('Garanti hatırlatıcıları'),
             subtitle: Text('Bitişe 90, 30 ve 7 gün kala saat 10:00'),
+          ),
+          ListTile(
+            key: const Key('privacy'),
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: const Text('Aydınlatma metni'),
+            subtitle: const Text('Hangi verileri neden işliyoruz'),
+            onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const PrivacyScreen())),
           ),
           if (kDebugMode) // developer detail, hidden in release builds
             const ListTile(

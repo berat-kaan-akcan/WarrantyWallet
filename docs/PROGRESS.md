@@ -77,6 +77,7 @@ Son güncelleme: 2026-10-17
 30. **Ana sayfa ve özetten filtreli listeye gitme (2026-10-20)** — Ana sayfadaki kategori çiplerine dokunmak "Ürünler" sekmesini o kategoriyle açıyor; Özet ekranındaki "Toplam ürün", "Aktif garanti" ve "Garanti dışı" kutuları listeyi ilgili filtreyle açıyor. Ürün listesinin filtresi artık paylaşılan bir durumda (`productListQueryProvider`), çıkışta sıfırlanıyor. Mobil testler: 81/81.
 31. **Aile davetini paylaşma (2026-10-20)** — Davet kodu penceresine "Paylaş" eklendi: kod, nasıl katılınacağını anlatan bir mesajla WhatsApp, SMS vb. üzerinden gönderilebiliyor. Ayrılma, dağıtma ve üye çıkarma onaylarına başlık eklendi; düğmeler "Evet" yerine yapılacak işi yazıyor ("Ayrıl", "Aileyi dağıt", "Çıkar").
 32. **Yönetici panelinde kullanıcı sayfalama (2026-10-20)** — `GET /admin/users` artık `q`, `limit`, `offset` alıyor ve `total` döndürüyor; en yeni kullanıcılar önce geliyor, arama Türkçe karakterden bağımsız. Panel 50'şer kullanıcı yüklüyor, "Daha fazla göster" ile devam ediyor, arama sunucuda yapılıyor. 55 kullanıcıyla Chromium'da denendi.
+33. **Aydınlatma metni (2026-10-20)** — Uygulamaya "Aydınlatma metni" ekranı eklendi: hangi verilerin neden işlendiği, fiş okuma ve arıza asistanında görüntü/metinlerin yurt dışındaki Google Gemini'ye gönderildiği, aile paylaşımının kapsamı, dışa aktarma ve hesap silme hakları. Kayıt formunda bilgilendirme notu ve bağlantı, Ayarlar'da kalıcı bağlantı var. Kayıt bir onay kutusuna bağlanmadı: yapay zekâ özellikleri isteğe bağlı olduğu için açık rıza, hizmet şartı yapılmadı. Metin taslaktır; veri sorumlusu bilgileri eklenmeli ve yayın öncesi hukuki olarak gözden geçirilmeli. Mobil testler: 82/82.
 
 ## Son durum (2026-10-17, kalanlar turu sonrası)
 Son commit'in CI koşusu yeşil (backend, PostgreSQL entegrasyonu, Docker imajı, mobil format/analiz/test, Android debug APK). Bu turda üç koşu kırmızı kaldı ve hemen düzeltildi: `6c0bb9b` gofmt eksikti (`1bb2d9b` ile düzeldi); `411efdc` ve `7e9763a`'da Android APK, `file_picker` sürümü yüzünden derlenmedi (`a48c74c` ile düzeldi). Yerelde: backend 95 test fonksiyonu geçti (PostgreSQL sözleşme testleri `-tags pgx` ile ayrıca geçti), mobil 69/69.
@@ -98,7 +99,7 @@ Son commit'in CI koşusu yeşil (backend, PostgreSQL entegrasyonu, Docker imajı
 - [x] FCM push (backend gönderici + cihaz kaydı; mobilde Firebase projesi bağlanınca etkin)
 - [x] Servis paketi PDF'ine servis ücreti ve zaman çizelgesini eklemek
 - [x] Admin paneline AI arıza asistanı kullanım istatistikleri; panelde refresh token ile oturum uzatma
-- [ ] İncelemedeki orta ve düşük öncelikli maddeler (kayıtta KVKK onayı)
+- [ ] Aydınlatma metnine veri sorumlusu bilgilerini eklemek ve hukuki incelemeden geçirmek; gerekirse yapay zekâ özelliklerini ilk kullanımda açık rızaya bağlamak
 - [ ] iOS derlemesi bu ortamda doğrulanamadı (macOS gerekir); gerçek cihazda kamera taraması elle denenmeli
 - [ ] Gemini 3.x modelleri yoğunlukta 503 verebiliyor; üretimde `GEMINI_FALLBACK_MODELS` izlenmeli
 

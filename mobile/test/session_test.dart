@@ -256,4 +256,19 @@ void main() {
     expect(find.text('ASUS TUF VG27AQ'), findsOneWidget);
     expect(find.text('Sony WH-1000XM5'), findsOneWidget);
   });
+
+  testWidgets('the privacy notice is reachable from registration',
+      (tester) async {
+    useTallScreen(tester);
+    await tester.pumpWidget(ProviderScope(
+        overrides: overrides(FakeRepository()),
+        child: const WarrantyWalletApp()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hesabınız yok mu? Kayıt olun'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('privacy_notice')));
+    await tester.tap(find.byKey(const Key('privacy_notice')));
+    await tester.pumpAndSettle();
+    expect(find.text('Yapay zekâ ve yurt dışına aktarım'), findsOneWidget);
+  });
 }
