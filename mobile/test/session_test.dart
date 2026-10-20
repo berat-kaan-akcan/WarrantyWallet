@@ -235,4 +235,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('password2')), findsNothing); // signed in
   });
+
+  testWidgets('category chips and summary tiles open a filtered product list',
+      (tester) async {
+    useTallScreen(tester);
+    await tester.pumpWidget(ProviderScope(
+        overrides: overrides(FakeRepository(), token: 'tok'),
+        child: const WarrantyWalletApp()));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Kulaklık (1)'));
+    await tester.tap(find.text('Kulaklık (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sony WH-1000XM5'), findsOneWidget);
+    expect(find.text('ASUS TUF VG27AQ'), findsNothing);
+
+    await tester.tap(find.text('Özet'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('stat_total')));
+    await tester.pumpAndSettle();
+    expect(find.text('ASUS TUF VG27AQ'), findsOneWidget);
+    expect(find.text('Sony WH-1000XM5'), findsOneWidget);
+  });
 }

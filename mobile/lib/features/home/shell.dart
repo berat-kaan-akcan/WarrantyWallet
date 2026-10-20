@@ -56,7 +56,7 @@ class _MainShellState extends ConsumerState<MainShell> {
       HomeScreen(onShowAll: () => _goTo(1)),
       const ProductListScreen(),
       const ServiceHistoryScreen(),
-      const DashboardScreen(),
+      DashboardScreen(onOpenProducts: () => _goTo(1)),
     ];
     return Scaffold(
       body: IndexedStack(index: _index, children: pages),

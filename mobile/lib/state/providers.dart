@@ -190,6 +190,7 @@ class AuthController extends StateNotifier<AuthState> {
     }
     for (final p in <ProviderOrFamily>[
       productsProvider,
+      productListQueryProvider,
       expiringProvider,
       dashboardProvider,
       productProvider,
@@ -253,6 +254,10 @@ final categoriesProvider = FutureProvider<List<ProductCategory>>((ref) async {
     return defaultCategories;
   }
 });
+
+/// The filter of the "Ürünler" tab; the home and summary screens set it to open a filtered list.
+final productListQueryProvider =
+    StateProvider<ProductQuery>((_) => const ProductQuery());
 
 final productsProvider =
     FutureProvider.family<List<Product>, ProductQuery>((ref, q) async {

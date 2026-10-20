@@ -8,7 +8,10 @@ import '../../widgets/common.dart';
 
 /// Dashboard: toplam ürün, aktif garanti, garanti dışı, toplam harcama, kategori dağılımı.
 class DashboardScreen extends ConsumerWidget {
-  const DashboardScreen({super.key});
+  const DashboardScreen({super.key, this.onOpenProducts});
+
+  /// Switches to the products tab; tiles set its filter first.
+  final VoidCallback? onOpenProducts;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -21,7 +24,15 @@ class DashboardScreen extends ConsumerWidget {
             ref.invalidate(dashboardProvider);
             await ref.read(dashboardProvider.future);
           },
-          child: DashboardView(d: d),
+          child: DashboardView(
+            d: d,
+            onOpenProducts: onOpenProducts == null
+                ? null
+                : (q) {
+                    ref.read(productListQueryProvider.notifier).state = q;
+                    onOpenProducts!();
+                  },
+          ),
         ),
         loading: () => const LoadingView(),
         error: (e, _) => ErrorState(
@@ -33,9 +44,15 @@ class DashboardScreen extends ConsumerWidget {
 
 /// Stateless dashboard body (widget-tested directly).
 class DashboardView extends StatelessWidget {
-  const DashboardView({super.key, required this.d});
+  const DashboardView({super.key, required this.d, this.onOpenProducts});
 
   final Dashboard d;
+
+  /// Opens the product list with the given filter.
+  final ValueChanged<ProductQuery>? onOpenProducts;
+
+  VoidCallback? open(ProductQuery q) =>
+      onOpenProducts == null ? null : () => onOpenProducts!(q);
 
   @override
   Widget build(BuildContext context) {
@@ -58,13 +75,15 @@ class DashboardView extends StatelessWidget {
                 key: const Key('stat_total'),
                 label: 'Toplam ürün',
                 value: '${d.totalProducts}',
-                icon: Icons.inventory_2),
+                icon: Icons.inventory_2,
+                onTap: open(const ProductQuery())),
             _StatTile(
               key: const Key('stat_active'),
               label: 'Aktif garanti',
               value: '${d.activeWarranties}',
               icon: Icons.verified_user,
               color: const Color(0xFF2E7D32),
+              onTap: open(const ProductQuery(status: 'active')),
             ),
             _StatTile(
               key: const Key('stat_expired'),
@@ -72,6 +91,7 @@ class DashboardView extends StatelessWidget {
               value: '${d.expired}',
               icon: Icons.gpp_bad,
               color: const Color(0xFFC62828),
+              onTap: open(const ProductQuery(status: 'expired')),
             ),
             _StatTile(
               key: const Key('stat_spent'),
@@ -312,12 +332,16 @@ class _StatTile extends StatelessWidget {
       required this.label,
       required this.value,
       required this.icon,
-      this.color});
+      this.color,
+      this.onTap});
 
   final String label;
   final String value;
   final IconData icon;
   final Color? color;
+
+  /// Opens the matching product list; null for tiles without one.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -325,22 +349,26 @@ class _StatTile extends StatelessWidget {
     final c = color ?? theme.colorScheme.primary;
     return MergeSemantics(
       child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Icon(icon, color: c),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(value,
-                    style: theme.textTheme.titleLarge
-                        ?.copyWith(fontWeight: FontWeight.bold)),
-              ),
-              Text(label, style: theme.textTheme.bodySmall),
-            ],
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, color: c),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(value,
+                      style: theme.textTheme.titleLarge
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                ),
+                Text(label, style: theme.textTheme.bodySmall),
+              ],
+            ),
           ),
         ),
       ),

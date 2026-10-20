@@ -70,7 +70,13 @@ class HomeScreen extends ConsumerWidget {
                     child: Text('Garantisi 90 gün içinde bitenler',
                         style: theme.textTheme.titleMedium)),
                 if (onShowAll != null)
-                  TextButton(onPressed: onShowAll, child: const Text('Tümü')),
+                  TextButton(
+                      onPressed: () {
+                        ref.read(productListQueryProvider.notifier).state =
+                            const ProductQuery();
+                        onShowAll!();
+                      },
+                      child: const Text('Tümü')),
               ],
             ),
             expiring.when(
@@ -102,9 +108,18 @@ class HomeScreen extends ConsumerWidget {
                       runSpacing: 8,
                       children: [
                         for (final c in d.byCategory)
-                          Chip(
+                          ActionChip(
                             avatar: Icon(categoryIcon(c.category), size: 18),
                             label: Text('${c.name} (${c.count})'),
+                            tooltip: '${c.name} ürünlerini göster',
+                            onPressed: onShowAll == null
+                                ? null
+                                : () {
+                                    ref
+                                        .read(productListQueryProvider.notifier)
+                                        .state = ProductQuery(category: c.category);
+                                    onShowAll!();
+                                  },
                           ),
                       ],
                     ),

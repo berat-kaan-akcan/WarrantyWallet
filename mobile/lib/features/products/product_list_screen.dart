@@ -21,7 +21,9 @@ class ProductListScreen extends ConsumerStatefulWidget {
 }
 
 class _ProductListScreenState extends ConsumerState<ProductListScreen> {
-  ProductQuery _query = const ProductQuery();
+  ProductQuery get _query => ref.read(productListQueryProvider);
+  set _query(ProductQuery q) =>
+      ref.read(productListQueryProvider.notifier).state = q;
   final _search = TextEditingController();
   Timer? _debounce;
 
@@ -90,6 +92,11 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Another screen may set the filter (a category chip, a summary tile); keep the field in sync.
+    ref.listen(productListQueryProvider, (_, q) {
+      if (_search.text.trim() != q.text) _search.text = q.text;
+    });
+    ref.watch(productListQueryProvider);
     final products = ref.watch(productsProvider(_query));
     final cats = ref.watch(categoriesProvider).valueOrNull ?? defaultCategories;
     return Scaffold(
