@@ -8,8 +8,8 @@ import 'package:warranty_wallet/state/providers.dart';
 import 'fakes.dart';
 import 'widget_test.dart' show overrides, useTallScreen;
 
-Widget _app(FakeRepository repo) => ProviderScope(
-      overrides: overrides(repo, token: 'tok'),
+Widget _app(FakeRepository repo, {List<String>? shared}) => ProviderScope(
+      overrides: overrides(repo, token: 'tok', shared: shared),
       child: const MaterialApp(home: _Signed()),
     );
 
@@ -55,7 +55,8 @@ void main() {
     useTallScreen(tester);
     final repo = FakeRepository()
       ..familyItems = [FamilyProduct(headphones, 'u2', 'Kaan')];
-    await tester.pumpWidget(_app(repo));
+    final shared = <String>[];
+    await tester.pumpWidget(_app(repo, shared: shared));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('family_create')));
@@ -77,12 +78,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('invite_code')), findsOneWidget);
     expect(find.text('K7QM-2XRP'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('share_invite')));
+    await tester.pumpAndSettle();
+    expect(shared.single, contains('K7QM-2XRP'));
     await tester.tap(find.text('Kapat'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('family_leave')));
     await tester.pumpAndSettle();
     expect(find.textContaining('Aile dağıtılacak'), findsOneWidget);
+    expect(find.text('Aile dağıtılsın mı?'), findsOneWidget);
     await tester.tap(find.byKey(const Key('confirm')));
     await tester.pumpAndSettle();
     expect(repo.calls, contains('family-:u1'));

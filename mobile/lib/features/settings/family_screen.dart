@@ -84,6 +84,21 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
             ),
             actions: [
               TextButton(
+                key: const Key('share_invite'),
+                onPressed: () async {
+                  try {
+                    await ref.read(textSharerProvider)(
+                        'Warranty Wallet aile hesabıma katıl: Ayarlar → Aile hesabı → '
+                        '"Davet koduyla katıl" bölümüne $code kodunu gir. Kod 7 gün geçerli.');
+                  } on Exception {
+                    if (ctx.mounted) {
+                      showSnack(ctx, 'Paylaşılamadı', error: true);
+                    }
+                  }
+                },
+                child: const Text('Paylaş'),
+              ),
+              TextButton(
                 onPressed: () async {
                   await Clipboard.setData(ClipboardData(text: code));
                   if (ctx.mounted) Navigator.of(ctx).pop();
@@ -100,6 +115,10 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
 
   Future<void> _remove(FamilyMember m,
       {required bool self, required bool owner}) async {
+    final title = self
+        ? (owner ? 'Aile dağıtılsın mı?' : 'Aileden ayrılınsın mı?')
+        : 'Üye çıkarılsın mı?';
+    final action = self ? (owner ? 'Aileyi dağıt' : 'Ayrıl') : 'Çıkar';
     final text = self
         ? (owner
             ? 'Aile dağıtılacak ve tüm üyeler çıkarılacak. Ürünleriniz silinmez.'
@@ -108,6 +127,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        title: Text(title),
         content: Text(text),
         actions: [
           TextButton(
@@ -116,7 +136,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
           TextButton(
               key: const Key('confirm'),
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('Evet')),
+              child: Text(action)),
         ],
       ),
     );

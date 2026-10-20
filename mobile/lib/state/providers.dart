@@ -15,6 +15,7 @@ final reminderSchedulerProvider =
 final pushServiceProvider = Provider<PushService>((ref) => NoopPushService());
 final linkOpenerProvider =
     Provider<LinkOpener>((ref) => UrlLauncherLinkOpener());
+final textSharerProvider = Provider<TextSharer>((ref) => shareText);
 final backupFilesProvider = Provider<BackupFiles>((ref) => DeviceBackupFiles());
 
 final repositoryProvider = Provider<WarrantyRepository>((ref) {

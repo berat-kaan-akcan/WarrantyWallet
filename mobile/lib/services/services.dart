@@ -16,6 +16,13 @@ import '../core/formatters.dart';
 import '../core/warranty.dart';
 import '../models/models.dart';
 
+/// Opens the system share sheet with a piece of text (invite codes).
+typedef TextSharer = Future<void> Function(String text);
+
+Future<void> shareText(String text) async {
+  await Share.share(text);
+}
+
 /// Persists the auth token.
 abstract class TokenStore {
   /// Short-lived access token (JWT).

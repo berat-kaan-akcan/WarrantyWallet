@@ -38,7 +38,8 @@ List<Override> overrides(FakeRepository repo,
     PushService? push,
     BackupFiles? backup,
     LinkOpener? links,
-    ReceiptImagePicker? picker}) {
+    ReceiptImagePicker? picker,
+    List<String>? shared}) {
   final tokens = MemoryTokenStore()..token = token;
   return [
     repositoryProvider.overrideWithValue(repo),
@@ -51,6 +52,7 @@ List<Override> overrides(FakeRepository repo,
     pushServiceProvider.overrideWithValue(push ?? FakePushService()),
     backupFilesProvider.overrideWithValue(backup ?? FakeBackupFiles()),
     linkOpenerProvider.overrideWithValue(links ?? FakeLinkOpener()),
+    textSharerProvider.overrideWithValue((t) async => shared?.add(t)),
   ];
 }
 
